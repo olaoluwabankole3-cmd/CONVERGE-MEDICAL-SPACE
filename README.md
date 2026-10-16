@@ -40,3 +40,15 @@ Create `.env.local` with the two public environment variables. Do not commit it.
 ## Safety boundary
 
 This is an early development environment. The dashboard's existing demo records are not yet persistent. Do not enter real patient information until authentication, hospital approval administration, access auditing, backups, and clinical security review have been implemented and tested.
+
+
+## Platform approval configuration
+
+To enable the platform-admin hospital registration queue, configure these variables in Vercel **Project Settings → Environment Variables**:
+
+- `PLATFORM_ADMIN_EMAILS`: comma-separated email addresses permitted to review registrations (for example, the exact email used by the platform administrator).
+- `SUPABASE_SERVICE_ROLE_KEY`: the Supabase service-role secret, used only by the server-side approval API. Obtain it from the Supabase project's API settings.
+
+Keep `SUPABASE_SERVICE_ROLE_KEY` server-only: **never** prefix it with `NEXT_PUBLIC_`, expose it in browser code, or commit its value to GitHub. After setting the variables, redeploy the Vercel project. If the allowlist is empty or the service key is missing, the approval API fails closed.
+
+The approval console is available at `/admin/approvals`. Only an authenticated user whose email exactly matches an entry in `PLATFORM_ADMIN_EMAILS` can read or act on the queue.
