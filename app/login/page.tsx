@@ -50,7 +50,7 @@ export default function LoginPage() {
           password,
         });
         if (authError) throw authError;
-        window.location.assign("/onboarding");
+        window.location.assign("/");
         return;
       }
     } catch (cause) {
