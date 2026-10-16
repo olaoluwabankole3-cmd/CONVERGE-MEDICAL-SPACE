@@ -1,87 +1,218 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Activity, AlertCircle, ArrowDownRight, ArrowRight, ArrowUpRight,
-  CalendarDays, CheckCircle2, ChevronDown, Clock3, FileClock,
-  LayoutDashboard, Search, Settings2, ShieldCheck, Stethoscope,
-  Users, WandSparkles, X, ClipboardList
+  Activity, AlertCircle, ArrowRight, CalendarDays, CheckCircle2, ChevronDown,
+  Clock3, FileClock, LayoutDashboard, LogOut, Search, Settings2, ShieldCheck,
+  Stethoscope, Users, WandSparkles, X, ClipboardList, RefreshCw
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type WorkItem = {
-  id: string; title: string; reference: string; type: string; owner: string;
-  priority: "High" | "Medium" | "Low"; status: string; tone: "rose" | "amber" | "blue" | "violet";
+type WorkType = "access_case" | "appointment" | "follow_up" | "exception" | "task";
+type WorkStatus = "draft" | "open" | "needs_review" | "in_progress" | "awaiting_response" | "resolved" | "closed";
+type Priority = "low" | "medium" | "high" | "urgent";
+type Hospital = { id: string; name: string; status: "pending" | "active" | "rejected" | "suspended"; city: string | null; country: string; contact_email: string };
+type DbWorkItem = {
+  id: string; hospital_id: string; reference_code: string; title: string; summary: string | null;
+  item_type: WorkType; priority: Priority; status: WorkStatus; owner_id: string | null;
+  external_reference: string | null; due_at: string | null; created_at: string; updated_at: string;
 };
+type WorkItem = DbWorkItem & { owner: string; typeLabel: string; statusLabel: string; tone: string; priorityLabel: string };
 
-const initialItems: WorkItem[] = [
-  { id: "AC-2048", title: "Referral documentation incomplete", reference: "Synthetic record · P-1048", type: "Access case", owner: "A. Okafor", priority: "High", status: "Needs review", tone: "rose" },
-  { id: "AP-0812", title: "Appointment confirmation pending", reference: "Synthetic record · P-0812", type: "Appointment", owner: "Unassigned", priority: "Medium", status: "Awaiting response", tone: "amber" },
-  { id: "FU-1176", title: "Post-visit follow-up due", reference: "Synthetic record · P-1176", type: "Follow-up", owner: "M. Bello", priority: "Medium", status: "Due today", tone: "blue" },
-  { id: "EX-0309", title: "Scheduling system response delayed", reference: "Workflow reference · EX-0309", type: "Exception", owner: "Operations team", priority: "High", status: "Investigating", tone: "rose" }
-];
-
-const metrics = [
-  { label: "Open access cases", value: "128", note: "12 need attention", icon: Users, tone: "blue", trend: "down" },
-  { label: "Appointments today", value: "46", note: "8 awaiting confirmation", icon: CalendarDays, tone: "violet", trend: "up" },
-  { label: "Follow-ups due", value: "23", note: "6 overdue", icon: Clock3, tone: "amber", trend: "down" },
-  { label: "Open exceptions", value: "07", note: "2 high priority", icon: AlertCircle, tone: "rose", trend: "up" }
-];
+const TYPE_LABELS: Record<WorkType, string> = { access_case: "Access case", appointment: "Appointment", follow_up: "Follow-up", exception: "Exception", task: "Task" };
+const STATUS_LABELS: Record<WorkStatus, string> = { draft: "Draft", open: "Open", needs_review: "Needs review", in_progress: "In progress", awaiting_response: "Awaiting response", resolved: "Resolved", closed: "Closed" };
+const PRIORITY_LABELS: Record<Priority, string> = { low: "Low", medium: "Medium", high: "High", urgent: "Urgent" };
+const STATUS_TONES: Record<WorkStatus, string> = { draft: "blue", open: "blue", needs_review: "rose", in_progress: "violet", awaiting_response: "amber", resolved: "blue", closed: "blue" };
+const ALLOWED_STATUSES: WorkStatus[] = ["open", "needs_review", "in_progress", "awaiting_response", "resolved", "closed"];
 
 function Pill({ children, tone = "blue" }: { children: React.ReactNode; tone?: string }) {
   return <span className={`pill pill-${tone}`}>{children}</span>;
 }
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+function mapItem(item: DbWorkItem): WorkItem {
+  return { ...item, owner: item.owner_id ? "Assigned staff member" : "Unassigned", typeLabel: TYPE_LABELS[item.item_type], statusLabel: STATUS_LABELS[item.status], tone: STATUS_TONES[item.status], priorityLabel: PRIORITY_LABELS[item.priority] };
+}
 
 export default function Home() {
-  const [items, setItems] = useState(initialItems);
+  const router = useRouter();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState("");
+  const [hospital, setHospital] = useState<Hospital | null>(null);
+  const [role, setRole] = useState("member");
+  const [items, setItems] = useState<WorkItem[]>([]);
   const [filter, setFilter] = useState("All items");
   const [selected, setSelected] = useState<WorkItem | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newReference, setNewReference] = useState("");
-  const [noticeVisible, setNoticeVisible] = useState(true);
+  const [newSummary, setNewSummary] = useState("");
+  const [newType, setNewType] = useState<WorkType>("access_case");
+  const [newPriority, setNewPriority] = useState<Priority>("medium");
+
+  const loadWorkspace = useCallback(async () => {
+    if (!supabase) {
+      setError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in Vercel, then redeploy.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) {
+        router.replace("/login");
+        return;
+      }
+      const user = authData.user;
+      setUserId(user.id);
+      setUserEmail(user.email ?? "");
+
+      // A hospital creator can see their own pending registration. Active members
+      // can discover their workspace through the membership policy.
+      let selectedHospital: Hospital | null = null;
+      const { data: ownedHospital, error: ownedError } = await supabase
+        .from("hospitals")
+        .select("id,name,status,city,country,contact_email")
+        .eq("created_by", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ownedError) throw ownedError;
+      selectedHospital = ownedHospital as Hospital | null;
+
+      let membershipRole = "owner";
+      if (!selectedHospital) {
+        const { data: memberships, error: membershipError } = await supabase
+          .from("hospital_memberships")
+          .select("hospital_id,role,created_at")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (membershipError) throw membershipError;
+        const membership = memberships?.[0];
+        if (membership) {
+          membershipRole = membership.role;
+          const { data: memberHospital, error: hospitalError } = await supabase
+            .from("hospitals")
+            .select("id,name,status,city,country,contact_email")
+            .eq("id", membership.hospital_id)
+            .maybeSingle();
+          if (hospitalError) throw hospitalError;
+          selectedHospital = memberHospital as Hospital | null;
+        }
+      }
+      setHospital(selectedHospital);
+      setRole(membershipRole);
+      if (!selectedHospital || selectedHospital.status !== "active") {
+        setItems([]);
+        setSelected(null);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: itemsError } = await supabase
+        .from("work_items")
+        .select("id,hospital_id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,created_at,updated_at")
+        .eq("hospital_id", selectedHospital.id)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      if (itemsError) throw itemsError;
+      const mapped = ((data ?? []) as DbWorkItem[]).map(mapItem);
+      setItems(mapped);
+      setSelected((current) => current ? mapped.find((item) => item.id === current.id) ?? null : null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load your hospital workspace.");
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase, router]);
+
+  useEffect(() => { void loadWorkspace(); }, [loadWorkspace]);
 
   const visibleItems = useMemo(() => items.filter((item) => {
-    const matchesFilter = filter === "All items" || (filter === "Unassigned" ? item.owner === "Unassigned" : item.owner === "Admin Operator");
+    const matchesFilter = filter === "All items" || (filter === "Unassigned" ? !item.owner_id : item.owner_id === userId);
     const query = search.toLowerCase().trim();
-    const matchesSearch = !query || [item.id, item.title, item.reference, item.type, item.owner].some((value) => value.toLowerCase().includes(query));
+    const matchesSearch = !query || [item.reference_code, item.title, item.external_reference ?? "", item.typeLabel, item.owner, item.statusLabel].some((value) => value.toLowerCase().includes(query));
     return matchesFilter && matchesSearch;
-  }), [items, filter, search]);
+  }), [items, filter, search, userId]);
 
-  function createCase(event: React.FormEvent<HTMLFormElement>) {
+  const metrics = useMemo(() => [
+    { label: "Open access cases", value: items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length, note: `${items.filter(i => i.item_type === "access_case" && ["needs_review", "awaiting_response"].includes(i.status)).length} need attention`, icon: Users, tone: "blue" },
+    { label: "Appointments", value: items.filter(i => i.item_type === "appointment" && !["resolved", "closed"].includes(i.status)).length, note: "Open appointment work items", icon: CalendarDays, tone: "violet" },
+    { label: "Follow-ups due", value: items.filter(i => i.item_type === "follow_up" && !["resolved", "closed"].includes(i.status)).length, note: `${items.filter(i => i.item_type === "follow_up" && i.due_at && new Date(i.due_at) < new Date() && !["resolved", "closed"].includes(i.status)).length} overdue`, icon: Clock3, tone: "amber" },
+    { label: "Open exceptions", value: items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length, note: `${items.filter(i => i.item_type === "exception" && ["high", "urgent"].includes(i.priority) && !["resolved", "closed"].includes(i.status)).length} high priority`, icon: AlertCircle, tone: "rose" }
+  ], [items]);
+
+  async function createWorkItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!newTitle.trim()) return;
-    const item: WorkItem = {
-      id: `AC-${Math.floor(3000 + Math.random() * 6000)}`,
-      title: newTitle.trim(),
-      reference: newReference.trim() || "Synthetic record · Reference not supplied",
-      type: "Access case",
-      owner: "Unassigned",
-      priority: "Medium",
-      status: "Draft",
-      tone: "blue"
-    };
-    setItems((current) => [item, ...current]);
-    setFilter("All items");
-    setSearch("");
-    setNewTitle("");
-    setNewReference("");
-    setShowCreate(false);
-    setSelected(item);
+    if (!supabase || !hospital || !userId || hospital.status !== "active") return;
+    setSaving(true); setError(""); setNotice("");
+    const prefix: Record<WorkType, string> = { access_case: "AC", appointment: "AP", follow_up: "FU", exception: "EX", task: "TK" };
+    const referenceCode = newReference.trim() || `${prefix[newType]}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    try {
+      const { data, error: insertError } = await supabase.from("work_items").insert({
+        hospital_id: hospital.id, reference_code: referenceCode, title: newTitle.trim(),
+        summary: newSummary.trim() || null, item_type: newType, priority: newPriority,
+        status: "open", external_reference: null, created_by: userId
+      }).select("id,hospital_id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,created_at,updated_at").single();
+      if (insertError) throw insertError;
+      await supabase.from("audit_events").insert({ hospital_id: hospital.id, actor_id: userId, entity_type: "work_item", entity_id: data.id, action: "created", details: { reference_code: referenceCode, item_type: newType } });
+      const mapped = mapItem(data as DbWorkItem);
+      setItems(current => [mapped, ...current]);
+      setSelected(mapped); setFilter("All items"); setSearch("");
+      setNewTitle(""); setNewReference(""); setNewSummary(""); setNewType("access_case"); setNewPriority("medium"); setShowCreate(false);
+      setNotice(`${mapped.reference_code} was saved to the hospital workspace.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save this work item. Check your hospital access and try again.");
+    } finally { setSaving(false); }
   }
+
+  async function updateStatus(nextStatus: WorkStatus) {
+    if (!supabase || !hospital || !selected || hospital.status !== "active") return;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const { data, error: updateError } = await supabase.from("work_items")
+        .update({ status: nextStatus })
+        .eq("id", selected.id).eq("hospital_id", hospital.id)
+        .select("id,hospital_id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,created_at,updated_at").single();
+      if (updateError) throw updateError;
+      await supabase.from("audit_events").insert({ hospital_id: hospital.id, actor_id: userId, entity_type: "work_item", entity_id: selected.id, action: "status_changed", details: { status: nextStatus, reference_code: selected.reference_code } });
+      const mapped = mapItem(data as DbWorkItem);
+      setItems(current => current.map(item => item.id === mapped.id ? mapped : item));
+      setSelected(mapped);
+      setNotice(`${mapped.reference_code} updated to ${mapped.statusLabel.toLowerCase()}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update the work item.");
+    } finally { setSaving(false); }
+  }
+
+  async function signOut() {
+    if (supabase) await supabase.auth.signOut();
+    router.replace("/login");
+  }
+
+  const activeCount = items.filter(i => !["resolved", "closed"].includes(i.status)).length;
 
   return (
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><Activity size={21} strokeWidth={2.4} /></div><div><strong>converge</strong><span>MEDICAL INTELLIGENCE</span></div></div>
-        <div className="workspace-switcher"><div className="hospital-mark"><Stethoscope size={18} /></div><div className="workspace-copy"><strong>Hospital workspace</strong><span>Demo environment</span></div><ChevronDown size={16} className="muted-icon" /></div>
+        <div className="workspace-switcher"><div className="hospital-mark"><Stethoscope size={18} /></div><div className="workspace-copy"><strong>{hospital?.name ?? "Hospital workspace"}</strong><span>{hospital?.status === "active" ? `${hospital.city ? hospital.city + ", " : ""}${hospital.country}` : hospital?.status === "pending" ? "Awaiting approval" : "No workspace connected"}</span></div><ChevronDown size={16} className="muted-icon" /></div>
         <div className="nav-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
-          <a className="nav-item active" href="#"><LayoutDashboard size={18} /> <span>Overview</span><i className="active-dot" /></a>
-          <a className="nav-item" href="#work"><Users size={18} /><span>Access cases</span><b className="nav-count">12</b></a>
+          <a className="nav-item active" href="#"><LayoutDashboard size={18} /><span>Overview</span><i className="active-dot" /></a>
+          <a className="nav-item" href="#work"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
           <a className="nav-item" href="#work"><CalendarDays size={18} /><span>Appointments</span></a>
           <a className="nav-item" href="#work"><CheckCircle2 size={18} /><span>Follow-ups & tasks</span></a>
-          <a className="nav-item" href="#attention"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">7</b></a>
+          <a className="nav-item" href="#attention"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
         </nav>
         <div className="nav-label">GOVERNANCE</div>
         <nav className="nav-list" aria-label="Governance navigation">
@@ -89,33 +220,35 @@ export default function Home() {
           <a className="nav-item" href="#attention"><ShieldCheck size={18} /><span>Approvals</span></a>
           <a className="nav-item" href="#activity"><FileClock size={18} /><span>Audit history</span></a>
         </nav>
-        <div className="sidebar-bottom"><a className="nav-item" href="#settings"><Settings2 size={18} /><span>Administration</span></a><div className="profile"><div className="avatar">AO</div><div className="profile-copy"><strong>Admin Operator</strong><span>Workspace administrator</span></div><ChevronDown size={15} className="muted-icon" /></div></div>
+        <div className="sidebar-bottom"><a className="nav-item" href="#settings"><Settings2 size={18} /><span>Administration</span></a><div className="profile"><div className="avatar">{(userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase()}</div><div className="profile-copy"><strong>{userEmail || "Signed-in user"}</strong><span>{role.replace("_", " ")} · workspace access</span></div><button className="icon-button subtle" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button></div></div>
       </aside>
 
       <section className="main-area">
-        <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div><div className="topbar-actions"><div className="demo-badge"><span /> Synthetic data</div><label className="search-box"><Search size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search work items" aria-label="Search work items" /></label><a className="dashboard-signin" href="/login">Sign in <ArrowRight size={14} /></a></div></header>
+        <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div><div className="topbar-actions"><div className="demo-badge"><span /> {hospital?.status === "active" ? "Live workspace" : "Setup required"}</div><label className="search-box"><Search size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search work items" aria-label="Search work items" /></label><button className="dashboard-signin" onClick={() => void loadWorkspace()} disabled={loading}><RefreshCw size={14} /> Refresh</button></div></header>
         <div className="page-content">
-          <div className="page-heading"><div><div className="eyebrow">THURSDAY, 16 OCTOBER 2026 <span className="eyebrow-line" /></div><h1>Good morning, Admin.</h1><p>Here’s what needs your attention across the hospital today.</p></div><button className="primary-button" onClick={() => setShowCreate(true)}><span>+</span> Create access case</button></div>
-          {noticeVisible && <div className="notice"><div className="notice-icon"><ShieldCheck size={19} /></div><div><strong>Demo workspace</strong><p>This first version uses synthetic records. No real patient information or live hospital systems are connected.</p></div><button className="notice-dismiss" onClick={() => setNoticeVisible(false)} aria-label="Dismiss notice"><X size={16} /></button></div>}
-          <section className="metrics-grid" aria-label="Operational summary">{metrics.map((metric) => { const Icon = metric.icon; const Trend = metric.trend === "up" ? ArrowUpRight : ArrowDownRight; return <article className="metric-card" key={metric.label}><div className="metric-top"><span>{metric.label}</span><div className={`metric-icon ${metric.tone}`}><Icon size={18} /></div></div><div className="metric-value">{metric.value}</div><div className={`metric-delta ${metric.tone}`}><Trend size={14} /> {metric.note}</div></article>; })}</section>
+          <div className="page-heading"><div><div className="eyebrow">{new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date()).toUpperCase()} <span className="eyebrow-line" /></div><h1>{hospital?.status === "active" ? "Your operations, at a glance." : "Set up your hospital workspace."}</h1><p>{hospital?.status === "active" ? "A live view of the operational work your team is coordinating." : "Complete the hospital approval process to begin managing operational work."}</p></div><button className="primary-button" onClick={() => setShowCreate(true)} disabled={!hospital || hospital.status !== "active"}><span>+</span> Create work item</button></div>
+          {error && <div className="notice error-notice"><div className="notice-icon"><AlertCircle size={19} /></div><div><strong>Something needs attention</strong><p>{error}</p></div><button className="notice-dismiss" onClick={() => setError("")} aria-label="Dismiss error"><X size={16} /></button></div>}
+          {notice && <div className="notice"><div className="notice-icon"><CheckCircle2 size={19} /></div><div><strong>Saved successfully</strong><p>{notice}</p></div><button className="notice-dismiss" onClick={() => setNotice("")} aria-label="Dismiss message"><X size={16} /></button></div>}
+          {!loading && (!hospital || hospital.status !== "active") && <section className="panel onboarding-state"><div className="notice-icon"><ShieldCheck size={22} /></div><div><h2>{!hospital ? "No hospital workspace found" : hospital.status === "pending" ? "Hospital registration awaiting approval" : hospital.status === "rejected" ? "Hospital registration was not approved" : "Hospital workspace is suspended"}</h2><p>{!hospital ? "Sign in and register your hospital before creating operational records." : hospital.status === "pending" ? "Your registration has been received. The workspace will become available after an authorised administrator approves it." : hospital.status === "rejected" ? "Please contact the platform administrator for the next steps." : "This workspace is not currently available. Contact the platform administrator."}</p><div className="onboarding-actions">{!hospital && <button className="primary-button" onClick={() => router.push("/onboarding")}>Register hospital <ArrowRight size={15} /></button>}<button className="secondary-button" onClick={signOut}>Sign out</button></div></div></section>}
+          <section className="metrics-grid" aria-label="Operational summary">{metrics.map((metric) => { const Icon = metric.icon; return <article className="metric-card" key={metric.label}><div className="metric-top"><span>{metric.label}</span><div className={`metric-icon ${metric.tone}`}><Icon size={18} /></div></div><div className="metric-value">{loading ? "—" : metric.value}</div><div className={`metric-delta ${metric.tone}`}>{metric.note}</div></article>; })}</section>
           <div className="content-grid">
             <section className="panel work-panel" id="work">
-              <div className="panel-heading"><div><h2>Today’s work</h2><p>Prioritised items across your workspace</p></div><button className="text-button" onClick={() => { setFilter("All items"); setSearch(""); }}>Reset view <ArrowRight size={15} /></button></div>
-              <div className="work-filters">{["All items", "Assigned to me", "Unassigned"].map((value) => <button key={value} className={`filter ${filter === value ? "active" : ""}`} onClick={() => setFilter(value)}>{value}<span>{value === "All items" ? items.length : value === "Unassigned" ? items.filter(i => i.owner === "Unassigned").length : 0}</span></button>)}</div>
-              <div className="table-wrap"><table><thead><tr><th>ITEM</th><th>TYPE</th><th>OWNER</th><th>PRIORITY</th><th>STATUS</th></tr></thead><tbody>{visibleItems.map((item) => <tr key={item.id} className={selected?.id === item.id ? "selected-row" : ""} onClick={() => setSelected(item)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") setSelected(item); }}><td><div className="item-title">{item.title}</div><div className="item-sub">{item.id} · {item.reference}</div></td><td><span className="type-label">{item.type}</span></td><td><span className={item.owner === "Unassigned" ? "unassigned" : "owner"}>{item.owner}</span></td><td><span className={`priority priority-${item.priority.toLowerCase()}`}><i />{item.priority}</span></td><td><Pill tone={item.tone}>{item.status}</Pill></td></tr>)}</tbody></table>{visibleItems.length === 0 && <div className="empty-state">No work items match this view.</div>}</div>
-              <div className="panel-footer"><span>Showing {visibleItems.length} of {items.length} prototype items</span><button className="text-button" onClick={() => { setFilter("All items"); setSearch(""); }}>Open work queue <ArrowRight size={15} /></button></div>
+              <div className="panel-heading"><div><h2>Operational work queue</h2><p>Persisted work items in your authorised hospital workspace</p></div><button className="text-button" onClick={() => { setFilter("All items"); setSearch(""); }}>Reset view <ArrowRight size={15} /></button></div>
+              <div className="work-filters">{["All items", "Assigned to me", "Unassigned"].map((value) => <button key={value} className={`filter ${filter === value ? "active" : ""}`} onClick={() => setFilter(value)}>{value}<span>{value === "All items" ? items.length : value === "Unassigned" ? items.filter(i => !i.owner_id).length : items.filter(i => i.owner_id === userId).length}</span></button>)}</div>
+              <div className="table-wrap"><table><thead><tr><th>ITEM</th><th>TYPE</th><th>OWNER</th><th>PRIORITY</th><th>STATUS</th></tr></thead><tbody>{visibleItems.map((item) => <tr key={item.id} className={selected?.id === item.id ? "selected-row" : ""} onClick={() => setSelected(item)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") setSelected(item); }}><td><div className="item-title">{item.title}</div><div className="item-sub">{item.reference_code} · {item.external_reference ? "External reference supplied" : "No external reference"}</div></td><td><span className="type-label">{item.typeLabel}</span></td><td><span className={!item.owner_id ? "unassigned" : "owner"}>{item.owner}</span></td><td><span className={`priority priority-${item.priority}`}><i />{item.priorityLabel}</span></td><td><Pill tone={item.tone}>{item.statusLabel}</Pill></td></tr>)}</tbody></table>{loading && <div className="empty-state">Loading authorised work items…</div>}{!loading && hospital?.status === "active" && visibleItems.length === 0 && <div className="empty-state">{items.length ? "No work items match this view." : "No operational work items yet. Create the first item to get started."}</div>}</div>
+              <div className="panel-footer"><span>Showing {visibleItems.length} of {items.length} saved work items</span><button className="text-button" onClick={() => void loadWorkspace()}>Refresh queue <ArrowRight size={15} /></button></div>
             </section>
             <aside className="right-column">
-              {selected && <section className="panel details-panel"><div className="panel-heading"><div><h2>Selected item</h2><p>Contextual record details</p></div><button className="icon-button subtle" onClick={() => setSelected(null)} aria-label="Close selected item"><X size={16} /></button></div><div className="detail-body"><Pill tone={selected.tone}>{selected.status}</Pill><h3>{selected.title}</h3><p className="detail-reference">{selected.id} · {selected.reference}</p><dl><div><dt>Work type</dt><dd>{selected.type}</dd></div><div><dt>Owner</dt><dd>{selected.owner}</dd></div><div><dt>Priority</dt><dd>{selected.priority}</dd></div></dl><p className="detail-note">Prototype only. No patient record has been accessed and no external workflow has been executed.</p></div></section>}
-              <section className="panel focus-panel" id="attention"><div className="panel-heading"><div><h2>Needs attention</h2><p>Items that may need action</p></div><span className="attention-count">3</span></div><div className="attention-item"><div className="attention-symbol rose"><AlertCircle size={17} /></div><div><strong>High-priority exceptions</strong><p>2 items need operational review</p><button className="inline-link" onClick={() => { setFilter("All items"); setSearch("EX-"); }}>Review exceptions <ArrowRight size={13} /></button></div></div><div className="attention-item"><div className="attention-symbol amber"><Clock3 size={17} /></div><div><strong>Overdue follow-ups</strong><p>6 follow-ups are past their due time</p><button className="inline-link" onClick={() => { setFilter("All items"); setSearch("follow-up"); }}>Review follow-ups <ArrowRight size={13} /></button></div></div><div className="attention-item"><div className="attention-symbol violet"><ShieldCheck size={17} /></div><div><strong>Pending approvals</strong><p>1 action is waiting for an authorised reviewer</p><button className="inline-link" onClick={() => setSelected(null)}>Open approvals <ArrowRight size={13} /></button></div></div></section>
-              <section className="panel activity-panel" id="activity"><div className="panel-heading"><div><h2>Recent activity</h2><p>Traceable workspace updates</p></div><button className="icon-button subtle" aria-label="Activity options"><Settings2 size={16} /></button></div><div className="activity-list"><div className="activity-entry"><div className="activity-icon"><ClipboardList size={16} /></div><div className="activity-copy"><strong>Case AC-2048 assigned for review</strong><p>Assigned by Operations desk</p><span>09:42 · Sample event</span></div></div><div className="activity-entry"><div className="activity-icon"><CalendarDays size={16} /></div><div className="activity-copy"><strong>Appointment request updated</strong><p>Confirmation still pending · AP-0812</p><span>09:28 · Sample event</span></div></div><div className="activity-entry"><div className="activity-icon"><AlertCircle size={16} /></div><div className="activity-copy"><strong>Exception EX-0309 flagged</strong><p>Scheduling response exceeded expected time</p><span>09:10 · Sample event</span></div></div></div><button className="text-button activity-link">View audit history <ArrowRight size={15} /></button></section>
-              <section className="ai-card" id="ai"><div className="ai-card-top"><div className="ai-mark"><WandSparkles size={19} /></div><Pill tone="violet">Governed AI</Pill></div><h2>AI support, with oversight.</h2><p>Review agent suggestions and evidence before any consequential action is taken.</p><button className="ai-link" onClick={() => alert("Agent registry will be implemented in a later milestone. No agent has been run.")}>Explore agent activity <ArrowRight size={15} /></button></section>
+              {selected && <section className="panel details-panel"><div className="panel-heading"><div><h2>Selected item</h2><p>Contextual record details</p></div><button className="icon-button subtle" onClick={() => setSelected(null)} aria-label="Close selected item"><X size={16} /></button></div><div className="detail-body"><Pill tone={selected.tone}>{selected.statusLabel}</Pill><h3>{selected.title}</h3><p className="detail-reference">{selected.reference_code} · Created {formatDate(selected.created_at)}</p>{selected.summary && <p className="detail-summary">{selected.summary}</p>}<dl><div><dt>Work type</dt><dd>{selected.typeLabel}</dd></div><div><dt>Owner</dt><dd>{selected.owner}</dd></div><div><dt>Priority</dt><dd>{selected.priorityLabel}</dd></div><div><dt>Last updated</dt><dd>{formatDate(selected.updated_at)}</dd></div></dl><label className="status-field">Update status<select value={selected.status} disabled={saving} onChange={(e) => void updateStatus(e.target.value as WorkStatus)}>{(["draft", ...ALLOWED_STATUSES] as WorkStatus[]).map(status => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}</select></label><p className="detail-note">Keep references operational and minimal. Do not store unnecessary patient-identifying information in work-item titles or summaries.</p></div></section>}
+              <section className="panel focus-panel" id="attention"><div className="panel-heading"><div><h2>Needs attention</h2><p>Calculated from saved work items</p></div><span className="attention-count">{items.filter(i => ["needs_review", "awaiting_response"].includes(i.status) && !["resolved", "closed"].includes(i.status)).length}</span></div><div className="attention-item"><div className="attention-symbol rose"><AlertCircle size={17} /></div><div><strong>High-priority exceptions</strong><p>{items.filter(i => i.item_type === "exception" && ["high", "urgent"].includes(i.priority) && !["resolved", "closed"].includes(i.status)).length} open exception(s) need operational review</p><button className="inline-link" onClick={() => { setFilter("All items"); setSearch("EX-"); }}>Review exceptions <ArrowRight size={13} /></button></div></div><div className="attention-item"><div className="attention-symbol amber"><Clock3 size={17} /></div><div><strong>Overdue follow-ups</strong><p>{items.filter(i => i.item_type === "follow_up" && i.due_at && new Date(i.due_at) < new Date() && !["resolved", "closed"].includes(i.status)).length} follow-up(s) past due</p><button className="inline-link" onClick={() => { setFilter("All items"); setSearch("follow-up"); }}>Review follow-ups <ArrowRight size={13} /></button></div></div><div className="attention-item"><div className="attention-symbol violet"><ShieldCheck size={17} /></div><div><strong>Workspace access</strong><p>{hospital?.status === "active" ? `Hospital active · role: ${role}` : "Hospital approval is required before operations can begin."}</p><button className="inline-link" onClick={() => router.push("/onboarding")}>Workspace details <ArrowRight size={13} /></button></div></div></section>
+              <section className="panel activity-panel" id="activity"><div className="panel-heading"><div><h2>Recent activity</h2><p>Recorded workspace events</p></div><button className="icon-button subtle" onClick={() => void loadWorkspace()} aria-label="Refresh activity"><RefreshCw size={15} /></button></div><div className="activity-list">{items.slice(0, 3).map(item => <div className="activity-entry" key={item.id}><div className="activity-icon"><ClipboardList size={16} /></div><div className="activity-copy"><strong>{item.reference_code} · {item.title}</strong><p>{item.statusLabel} · {item.typeLabel}</p><span>{formatDate(item.updated_at)}</span></div></div>)}{!loading && items.length === 0 && <div className="empty-state">No activity yet. Saved work will appear here.</div>}</div><button className="text-button activity-link" onClick={() => setNotice("Audit event history is recorded in Supabase. A dedicated audit-history screen is the next administration milestone.")}>View audit history <ArrowRight size={15} /></button></section>
+              <section className="ai-card" id="ai"><div className="ai-card-top"><div className="ai-mark"><WandSparkles size={19} /></div><Pill tone="violet">Governed AI</Pill></div><h2>AI support, with oversight.</h2><p>AI features are not enabled yet. The next milestone adds evidence-linked operational assistance with human approval controls.</p><button className="ai-link" onClick={() => setNotice("AI agent registry is planned after the core operational workflows and access controls are verified.")}>Explore AI roadmap <ArrowRight size={15} /></button></section>
             </aside>
           </div>
-          <footer className="page-footer"><span><i className="footer-dot" /> Workspace prototype available</span><span>Converge Medical Intelligence <b>·</b> Prototype v0.1</span></footer>
+          <footer className="page-footer"><span><i className="footer-dot" /> {loading ? "Connecting to workspace…" : hospital?.status === "active" ? "Connected to Supabase" : "Workspace setup incomplete"}</span><span>Converge Medical Intelligence <b>·</b> {activeCount} open item(s)</span></footer>
         </div>
       </section>
-      {showCreate && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="create-title"><div className="modal-heading"><div><span className="modal-kicker">WORKSPACE ITEM</span><h2 id="create-title">Create access case</h2><p>Create a local prototype item using synthetic information.</p></div><button className="icon-button" onClick={() => setShowCreate(false)} aria-label="Close dialog"><X size={17} /></button></div><form onSubmit={createCase}><label>Case title<input required value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Referral documents to review" autoFocus /></label><label>Reference (synthetic only)<input value={newReference} onChange={(e) => setNewReference(e.target.value)} placeholder="e.g. Demo reference P-2001" /></label><div className="form-note"><ShieldCheck size={16} /> Do not enter real patient details. This action only updates this browser session; it does not save to a server.</div><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setShowCreate(false)}>Cancel</button><button type="submit" className="primary-button">Create draft case <ArrowRight size={15} /></button></div></form></section></div>}
+      {showCreate && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) setShowCreate(false); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="create-title"><div className="modal-heading"><div><span className="modal-kicker">HOSPITAL WORKSPACE</span><h2 id="create-title">Create work item</h2><p>Saved to Supabase and scoped to the active hospital.</p></div><button className="icon-button" onClick={() => setShowCreate(false)} aria-label="Close dialog" disabled={saving}><X size={17} /></button></div><form onSubmit={createWorkItem}><label>Work item title<input required minLength={3} maxLength={240} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Referral documentation requires review" autoFocus /></label><label>Work type<select value={newType} onChange={(e) => setNewType(e.target.value as WorkType)}><option value="access_case">Access case</option><option value="appointment">Appointment</option><option value="follow_up">Follow-up</option><option value="exception">Exception</option><option value="task">Task</option></select></label><label>Priority<select value={newPriority} onChange={(e) => setNewPriority(e.target.value as Priority)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></label><label>Reference code (optional)<input maxLength={80} value={newReference} onChange={(e) => setNewReference(e.target.value)} placeholder="e.g. AC-2048 (no patient name)" /></label><label>Operational summary (optional)<textarea maxLength={1000} value={newSummary} onChange={(e) => setNewSummary(e.target.value)} placeholder="Brief operational context. Avoid unnecessary patient-identifying details." rows={3} /></label><div className="form-note"><ShieldCheck size={16} /> This creates a persistent operational record. Do not enter names, diagnoses, or other unnecessary sensitive patient information.</div><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setShowCreate(false)} disabled={saving}>Cancel</button><button type="submit" className="primary-button" disabled={saving}>{saving ? "Saving…" : "Save work item"} <ArrowRight size={15} /></button></div></form></section></div>}
     </main>
   );
 }
