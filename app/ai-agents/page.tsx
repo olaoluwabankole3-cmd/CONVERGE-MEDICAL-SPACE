@@ -178,6 +178,7 @@ export default function AIAgentsPage() {
           dueAt: taskDraft.dueDate
             ? new Date(taskDraft.dueDate + "T23:59:00").toISOString()
             : null,
+          ownerUserId: taskDraft.ownerUserId || null,
         }),
       });
       const payload = await response.json();
@@ -187,8 +188,11 @@ export default function AIAgentsPage() {
       }
       if (!response.ok) throw new Error(payload.error ?? "Unable to create a follow-up task.");
       const reference = payload.workItem?.reference_code;
+      const assignedLabel = taskDraft.ownerUserId
+        ? staffOptions.find(member => member.userId === taskDraft.ownerUserId)?.displayName
+        : null;
       setTaskDraft(null);
-      setTaskNotice("Created " + (reference ?? "a follow-up task") + ". It has been added to the hospital work queue and audit history.");
+      setTaskNotice("Created " + (reference ?? "a follow-up task") + (assignedLabel ? " and assigned it to " + assignedLabel : "") + ". It has been added to the hospital work queue and audit history.");
       await load(true);
     } catch (cause) {
       setTaskError(cause instanceof Error ? cause.message : "Unable to create a follow-up task.");
