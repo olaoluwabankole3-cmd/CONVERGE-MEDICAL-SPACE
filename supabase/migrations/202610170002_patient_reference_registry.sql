@@ -59,6 +59,7 @@ create policy "Permitted staff can create patient references"
 on public.patient_records for insert to authenticated
 with check (
   created_by = (select auth.uid())
+  and status = 'active'
   and public.has_hospital_role(hospital_id, array['owner','admin','clinician','operations']::public.hospital_member_role[])
 );
 
@@ -74,3 +75,5 @@ on public.patient_records for delete to authenticated
 using (public.has_hospital_role(hospital_id, array['owner','admin']::public.hospital_member_role[]));
 
 grant select, insert, update, delete on public.patient_records to authenticated;
+
+notify pgrst, 'reload schema';
