@@ -76,7 +76,7 @@ export default function HospitalTeamPage() {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "The invitation could not be sent.");
-      setNotice(payload.warning ?? `Invitation prepared for ${email.trim()} as ${inviteRole}.`);
+      setNotice(payload.warning ?? payload.message ?? `Team access updated for ${email.trim()}.`);
       setEmail("");
       await load();
     } catch (cause) {
