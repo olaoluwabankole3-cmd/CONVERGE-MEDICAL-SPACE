@@ -78,46 +78,55 @@ export default function Home() {
       setUserId(user.id);
       setUserEmail(user.email ?? "");
 
-      // A hospital creator can see their own pending registration. Active members
-      // can discover their workspace through the membership policy.
+      // Resolve an active membership first so users who belong to an existing
+      // hospital are not sent to an unrelated pending registration they created.
+      // RLS only exposes active memberships; the creator lookup below handles
+      // the owner's pending/rejected registration state.
       let selectedHospital: Hospital | null = null;
-      const { data: ownedHospital, error: ownedError } = await supabase
-        .from("hospitals")
-        .select("id,name,status,city,country,contact_email")
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (ownedError) throw ownedError;
-      selectedHospital = ownedHospital as Hospital | null;
-
       let membershipRole = "owner";
-      if (!selectedHospital) {
-        const { data: memberships, error: membershipError } = await supabase
-          .from("hospital_memberships")
-          .select("hospital_id,role,created_at")
+      let hasActiveMembership = false;
+
+      const { data: memberships, error: membershipError } = await supabase
+        .from("hospital_memberships")
+        .select("hospital_id,role,created_at")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (membershipError) throw membershipError;
+
+      const membership = memberships?.[0];
+      if (membership) {
+        membershipRole = membership.role;
+        const { data: memberHospital, error: hospitalError } = await supabase
+          .from("hospitals")
+          .select("id,name,status,city,country,contact_email")
+          .eq("id", membership.hospital_id)
+          .maybeSingle();
+        if (hospitalError) throw hospitalError;
+        selectedHospital = memberHospital as Hospital | null;
+        hasActiveMembership = selectedHospital?.status === "active";
+      } else {
+        const { data: ownedHospital, error: ownedError } = await supabase
+          .from("hospitals")
+          .select("id,name,status,city,country,contact_email")
+          .eq("created_by", user.id)
           .order("created_at", { ascending: false })
-          .limit(1);
-        if (membershipError) throw membershipError;
-        const membership = memberships?.[0];
-        if (membership) {
-          membershipRole = membership.role;
-          const { data: memberHospital, error: hospitalError } = await supabase
-            .from("hospitals")
-            .select("id,name,status,city,country,contact_email")
-            .eq("id", membership.hospital_id)
-            .maybeSingle();
-          if (hospitalError) throw hospitalError;
-          selectedHospital = memberHospital as Hospital | null;
-        }
+          .limit(1)
+          .maybeSingle();
+        if (ownedError) throw ownedError;
+        selectedHospital = ownedHospital as Hospital | null;
       }
+
       setHospital(selectedHospital);
       setRole(membershipRole);
       if (!selectedHospital || selectedHospital.status !== "active") {
         setItems([]);
+        setAuditEvents([]);
         setSelected(null);
         setLoading(false);
         return;
+      }
+      if (!hasActiveMembership) {
+        throw new Error("This hospital is active, but your membership could not be verified. Please contact your hospital administrator before accessing operational records.");
       }
 
       const { data, error: itemsError } = await supabase
