@@ -34,11 +34,13 @@ Never place a Supabase secret/service-role key in a `NEXT_PUBLIC_` variable or c
 
 Run these migrations in order in the intended Supabase project's SQL Editor. Vercel does not execute migrations automatically.
 
-1. `supabase/migrations/202610160001_initial_schema.sql` — core hospital, membership, work-item, audit-event tables and RLS policies.
+1. `supabase/migrations/202610160001_initial_schema.sql` — core hospital, membership, work-item, and audit-event tables with RLS policies.
 2. `supabase/migrations/202610170001_tenant_isolation_hardening.sql` — prevents records and memberships from being moved across hospital boundaries, and validates that assigned staff belong to the same active hospital.
 3. `supabase/migrations/202610170002_patient_reference_registry.sql` — adds a minimal hospital-scoped patient reference directory with RLS and immutable tenant scope.
+4. `supabase/migrations/202610180001_link_work_items_to_patient_references.sql` — links internal work items to active patient references within the same hospital.
+5. `supabase/migrations/202610180002_restrict_client_table_privileges.sql` — removes excessive direct table/sequence privileges from `anon` and `authenticated`, and removes the broad membership-management RLS policy. Intended server-side team operations continue through the authenticated API.
 
-The second migration is additive and should be run after the initial schema. It is designed to be safe to rerun. Run the third migration after the tenant-isolation migration if you want to use `/patients`.
+Apply these migrations in order on a fresh database. For an existing database, first verify which of the previous migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. The fifth migration is now committed to the repository but must still be run manually in the intended Supabase project's SQL Editor before relying on the tightened permissions.
 
 ## Local development
 
