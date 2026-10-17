@@ -29,6 +29,7 @@ do $$ begin
     'in_progress',
     'cancellation_requested',
     'completed',
+    'no_show',
     'cancelled',
     'declined'
   );
@@ -289,7 +290,7 @@ begin
           'cancellation_requested', 'cancelled', 'declined'
         )
         when 'confirmed' then new.status in (
-          'in_progress', 'cancellation_requested', 'cancelled', 'completed'
+          'in_progress', 'cancellation_requested', 'cancelled', 'completed', 'no_show'
         )
         when 'in_progress' then new.status in (
           'awaiting_patient', 'cancellation_requested', 'cancelled', 'completed'
@@ -359,6 +360,14 @@ begin
            and a.status = 'completed'
        ) then
       raise exception 'An appointment request cannot be completed before its appointment is completed';
+    elsif new.status = 'no_show'
+       and not exists (
+         select 1 from public.appointments a
+         where a.patient_request_id = new.id
+           and a.hospital_id = new.hospital_id
+           and a.status = 'no_show'
+       ) then
+      raise exception 'An appointment request can be marked no_show only when its appointment is marked no_show';
     elsif new.status in ('cancelled', 'declined')
        and exists (
          select 1 from public.appointments a
@@ -370,7 +379,7 @@ begin
     end if;
   end if;
 
-  if new.status in ('completed', 'cancelled', 'declined') then
+  if new.status in ('completed', 'no_show', 'cancelled', 'declined') then
     new.closed_at := coalesce(new.closed_at, now());
   else
     new.closed_at := null;
