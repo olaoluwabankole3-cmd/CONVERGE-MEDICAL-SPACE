@@ -18,6 +18,7 @@ A multi-hospital operations workspace built with Next.js, TypeScript, and Supaba
 - Patient reference directory at `/patients`, designed around hospital references and care area rather than names or clinical notes.
 - Persistent work-item creation with type, priority, external reference, due date, status transitions, and audit events.
 - GitHub Actions validation workflow for ESLint and a production build.
+- Governed operations analyst that reviews aggregate hospital workflow metrics; authorised staff can review and explicitly create a follow-up task, with task creation and audit logging committed atomically.
 
 ## Configure Supabase and Vercel
 
@@ -41,8 +42,9 @@ Run these migrations in order in the intended Supabase project's SQL Editor. Ver
 5. `supabase/migrations/202610180002_restrict_client_table_privileges.sql` — removes excessive direct table/sequence privileges from `anon` and `authenticated`, and removes the broad membership-management RLS policy. Intended server-side team operations continue through the authenticated API.
 6. `supabase/migrations/202610180003_patient_request_core.sql` — adds patient profiles, hospital services, canonical patient requests, structured appointment records, request links on work items, lifecycle validation, and read-only authenticated RLS policies for patient owners and hospital staff.
 7. `supabase/migrations/202610180004_patient_request_transactional_workflows.sql` — adds request messages and service-role-only PostgreSQL functions for atomic patient submission, patient responses, staff review, appointment proposal/confirmation, cancellation and completion, linked work items, and audit events.
+8. `supabase/migrations/202610180005_human_approved_operations_followups.sql` — adds a role-checked, service-role-only transaction that creates a staff-approved operational follow-up task and its audit event together.
 
-Apply these migrations in order on a fresh database. For an existing database, first verify which migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. Migration 7 is required by the new patient/hospital request APIs and must be run manually in the intended Supabase project before those workflows are used. The public service directory and new pages are committed to GitHub, but deployment, database RPC behaviour, authentication flows, and tenant isolation still require live verification. Use synthetic data only until that verification and the hospital's security review are complete.
+Apply these migrations in order on a fresh database. For an existing database, first verify which migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. Migration 7 is required by the patient/hospital request APIs and migration 8 is required to create follow-up tasks from the operations analyst. Run each applicable migration once in the intended Supabase project before using its workflow. The public service directory and new pages are committed to GitHub, but deployment, database RPC behaviour, authentication flows, and tenant isolation still require live verification. Use synthetic data only until that verification and the hospital's security review are complete.
 
 ## Local development
 
@@ -77,7 +79,7 @@ This build is an operational foundation, not a production clinical system. Verif
 \n
 ## Governed operations analyst
 
-The `/ai-agents` workspace provides read-only administrative workflow signals. It calculates counts from patient request statuses, work-item ownership/priority/due dates, and appointment states. The optional AI narrative receives **aggregate metrics only**; it is not sent patient names, phone numbers, request subjects, patient messages, or clinical notes. If the AI provider is not configured or cannot return a valid response, the page displays explicitly labelled rules-based signals instead.
+The `/ai-agents` workspace provides read-only administrative workflow signals. A staff member with an owner, admin, clinician, or operations role may explicitly review a suggestion and convert it into an ordinary open follow-up task. Task creation is never automatic; migration 8 must be applied first. The API verifies hospital membership, while the database function independently checks the active hospital role and atomically writes the task and audit event. It calculates counts from patient request statuses, work-item ownership/priority/due dates, and appointment states. The optional AI narrative receives **aggregate metrics only**; it is not sent patient names, phone numbers, request subjects, patient messages, or clinical notes. If the AI provider is not configured or cannot return a valid response, the page displays explicitly labelled rules-based signals instead.
 
 To enable the optional AI-generated narrative, add these server-side environment variables in Vercel:
 
