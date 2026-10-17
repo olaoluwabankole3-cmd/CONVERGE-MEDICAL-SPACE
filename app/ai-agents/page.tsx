@@ -15,7 +15,9 @@ type Insight = {
   recommendation: string;
 };
 
-type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string; ownerUserId: string };\n\ntype StaffOption = { userId: string; role: string; displayName: string };
+type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string; ownerUserId: string };
+
+type StaffOption = { userId: string; role: string; displayName: string };
 
 type OperationsData = {
   role: string;
