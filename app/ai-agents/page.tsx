@@ -15,9 +15,7 @@ type Insight = {
   recommendation: string;
 };
 
-type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string; ownerUserId: string };
-
-type StaffOption = { userId: string; role: string; displayName: string };
+type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string };
 
 type OperationsData = {
   role: string;
@@ -100,7 +98,7 @@ export default function AIAgentsPage() {
   const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
   const [savingTask, setSavingTask] = useState(false);
   const [taskError, setTaskError] = useState("");
-  const [taskNotice, setTaskNotice] = useState("");\n  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);\n  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [taskNotice, setTaskNotice] = useState("");
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -128,11 +126,9 @@ export default function AIAgentsPage() {
   const metrics = data?.metrics;
   const canCreateTask = !!data && ["owner", "admin", "clinician", "operations"].includes(data.role);
 
-  async function draftFollowUp(insight: Insight, index: number) {
-    if (!data) return;
+  function draftFollowUp(insight: Insight, index: number) {
     setTaskError("");
     setTaskNotice("");
-    setStaffOptions([]);
     setTaskDraft({
       sourceKey: insight.title + "-" + index,
       sourceRecommendation: insight.title,
@@ -140,23 +136,7 @@ export default function AIAgentsPage() {
       summary: "Evidence: " + insight.evidence + String.fromCharCode(10) + String.fromCharCode(10) + "Reviewed next step: " + insight.recommendation,
       priority: insight.priority === "high" ? "high" : insight.priority === "low" ? "low" : "medium",
       dueDate: "",
-      ownerUserId: "",
     });
-    setLoadingStaff(true);
-    try {
-      const response = await fetch("/api/operations/follow-ups?hospitalId=" + encodeURIComponent(data.hospital.id), { cache: "no-store" });
-      const payload = await response.json();
-      if (response.status === 401) {
-        window.location.assign("/login");
-        return;
-      }
-      if (!response.ok) throw new Error(payload.error ?? "Unable to load hospital staff for assignment.");
-      setStaffOptions((payload.members ?? []) as StaffOption[]);
-    } catch (cause) {
-      setTaskError(cause instanceof Error ? cause.message : "Unable to load hospital staff for assignment.");
-    } finally {
-      setLoadingStaff(false);
-    }
   }
 
   async function saveFollowUpTask(event: FormEvent<HTMLFormElement>) {
@@ -178,7 +158,6 @@ export default function AIAgentsPage() {
           dueAt: taskDraft.dueDate
             ? new Date(taskDraft.dueDate + "T23:59:00").toISOString()
             : null,
-          ownerUserId: taskDraft.ownerUserId || null,
         }),
       });
       const payload = await response.json();
@@ -188,11 +167,8 @@ export default function AIAgentsPage() {
       }
       if (!response.ok) throw new Error(payload.error ?? "Unable to create a follow-up task.");
       const reference = payload.workItem?.reference_code;
-      const assignedLabel = taskDraft.ownerUserId
-        ? staffOptions.find(member => member.userId === taskDraft.ownerUserId)?.displayName
-        : null;
       setTaskDraft(null);
-      setTaskNotice("Created " + (reference ?? "a follow-up task") + (assignedLabel ? " and assigned it to " + assignedLabel : "") + ". It has been added to the hospital work queue and audit history.");
+      setTaskNotice("Created " + (reference ?? "a follow-up task") + ". It has been added to the hospital work queue and audit history.");
       await load(true);
     } catch (cause) {
       setTaskError(cause instanceof Error ? cause.message : "Unable to create a follow-up task.");
@@ -313,12 +289,6 @@ export default function AIAgentsPage() {
                         </label>
                         <label>Task details
                           <textarea value={taskDraft.summary} onChange={event => setTaskDraft(current => current ? { ...current, summary: event.target.value } : current)} required minLength={3} maxLength={3000} rows={5} />
-                        </label>
-                        <label>Assign to <span>(optional)</span>
-                          <select value={taskDraft.ownerUserId} disabled={loadingStaff} onChange={event => setTaskDraft(current => current ? { ...current, ownerUserId: event.target.value } : current)}>
-                            <option value="">{loadingStaff ? "Loading active staff…" : "Leave unassigned"}</option>
-                            {staffOptions.map(member => <option key={member.userId} value={member.userId}>{member.displayName} · {label(member.role)}</option>)}
-                          </select>
                         </label>
                         <div className={styles.taskDraftFields}>
                           <label>Priority
