@@ -15,7 +15,7 @@ type Insight = {
   recommendation: string;
 };
 
-type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string };
+type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string; ownerUserId: string };
 
 type OperationsData = {
   role: string;
@@ -136,6 +136,7 @@ export default function AIAgentsPage() {
       summary: "Evidence: " + insight.evidence + String.fromCharCode(10) + String.fromCharCode(10) + "Reviewed next step: " + insight.recommendation,
       priority: insight.priority === "high" ? "high" : insight.priority === "low" ? "low" : "medium",
       dueDate: "",
+      ownerUserId: "",
     });
   }
 
@@ -158,6 +159,7 @@ export default function AIAgentsPage() {
           dueAt: taskDraft.dueDate
             ? new Date(taskDraft.dueDate + "T23:59:00").toISOString()
             : null,
+          ownerUserId: taskDraft.ownerUserId || null,
         }),
       });
       const payload = await response.json();
