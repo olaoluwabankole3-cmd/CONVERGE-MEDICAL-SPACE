@@ -20,7 +20,6 @@ function csvCell(value: unknown) {
 export default function ReportsPage() {
   const router = useRouter();
   const [hospitalName, setHospitalName] = useState("");
-  const [hospitalId, setHospitalId] = useState("");
   const [rows, setRows] = useState<WorkRow[]>([]);
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
@@ -47,7 +46,7 @@ export default function ReportsPage() {
         .select("id,reference_code,title,item_type,priority,status,due_at,created_at,updated_at")
         .eq("hospital_id", hospital.id).order("updated_at", { ascending: false }).limit(1000);
       if (itemsError) throw itemsError;
-      setHospitalId(hospital.id); setHospitalName(hospital.name); setRows((data ?? []) as WorkRow[]);
+      setHospitalName(hospital.name); setRows((data ?? []) as WorkRow[]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load workspace reports.");
     } finally { setLoading(false); }
