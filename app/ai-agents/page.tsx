@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Activity, AlertTriangle, ArrowLeft, ArrowRight, Bot, CalendarClock,
-  CheckCircle2, Clock3, RefreshCw, ShieldCheck, Users, Workflow,
+  CheckCircle2, Clock3, RefreshCw, ShieldCheck, Users, Workflow, ClipboardCheck, X,
 } from "lucide-react";
 import styles from "./ops.module.css";
 
@@ -15,7 +15,10 @@ type Insight = {
   recommendation: string;
 };
 
+type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string };
+
 type OperationsData = {
+  role: string;
   hospital: { id: string; name: string; city: string | null; country: string };
   generatedAt: string;
   mode: "ai" | "rules";
@@ -87,6 +90,10 @@ export default function AIAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
+  const [savingTask, setSavingTask] = useState(false);
+  const [taskError, setTaskError] = useState("");
+  const [taskNotice, setTaskNotice] = useState("");
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -112,6 +119,58 @@ export default function AIAgentsPage() {
   useEffect(() => { void load(); }, [load]);
 
   const metrics = data?.metrics;
+  const canCreateTask = !!data && ["owner", "admin", "clinician", "operations"].includes(data.role);
+
+  function draftFollowUp(insight: Insight, index: number) {
+    setTaskError("");
+    setTaskNotice("");
+    setTaskDraft({
+      sourceKey: insight.title + "-" + index,
+      sourceRecommendation: insight.title,
+      title: ("Follow up: " + insight.title).slice(0, 240),
+      summary: "Evidence: " + insight.evidence + "\\n\\nReviewed next step: " + insight.recommendation,
+      priority: insight.priority === "high" ? "high" : insight.priority === "low" ? "low" : "medium",
+      dueDate: "",
+    });
+  }
+
+  async function saveFollowUpTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!data || !taskDraft) return;
+    setSavingTask(true);
+    setTaskError("");
+    setTaskNotice("");
+    try {
+      const response = await fetch("/api/operations/follow-ups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hospitalId: data.hospital.id,
+          title: taskDraft.title.trim(),
+          summary: taskDraft.summary.trim(),
+          sourceRecommendation: taskDraft.sourceRecommendation,
+          priority: taskDraft.priority,
+          dueAt: taskDraft.dueDate
+            ? new Date(taskDraft.dueDate + "T23:59:00").toISOString()
+            : null,
+        }),
+      });
+      const payload = await response.json();
+      if (response.status === 401) {
+        window.location.assign("/login");
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error ?? "Unable to create a follow-up task.");
+      const reference = payload.workItem?.reference_code;
+      setTaskDraft(null);
+      setTaskNotice("Created " + (reference ?? "a follow-up task") + ". It has been added to the hospital work queue and audit history.");
+      await load(true);
+    } catch (cause) {
+      setTaskError(cause instanceof Error ? cause.message : "Unable to create a follow-up task.");
+    } finally {
+      setSavingTask(false);
+    }
+  }
 
   return (
     <main className={styles.page}>
@@ -162,6 +221,19 @@ export default function AIAgentsPage() {
         </section>
       )}
 
+      {taskNotice && (
+        <section className={styles.taskNotice} role="status">
+          <CheckCircle2 size={16} /><span>{taskNotice}</span>
+          <button onClick={() => setTaskNotice("")} aria-label="Dismiss notification"><X size={14} /></button>
+        </section>
+      )}
+      {taskError && (
+        <section className={styles.errorPanel} role="alert">
+          <AlertTriangle size={17} /><div><strong>Task not created</strong><p>{taskError}</p></div>
+          <button onClick={() => setTaskError("")}>Dismiss</button>
+        </section>
+      )}
+
       {loading && !data ? (
         <section className={styles.loadingPanel}><span className={styles.spinner} /><p>Checking operational workflow signals…</p></section>
       ) : data && metrics ? (
@@ -196,6 +268,41 @@ export default function AIAgentsPage() {
                       <CheckCircle2 size={15} />
                       <p><strong>Suggested next step</strong><span>{insight.recommendation}</span></p>
                     </div>
+                    {canCreateTask && taskDraft?.sourceKey !== insight.title + "-" + index && (
+                      <button className={styles.draftTaskButton} onClick={() => draftFollowUp(insight, index)}>
+                        <ClipboardCheck size={14} /> Draft follow-up task
+                      </button>
+                    )}
+                    {taskDraft?.sourceKey === insight.title + "-" + index && (
+                      <form className={styles.taskDraftForm} onSubmit={saveFollowUpTask}>
+                        <div className={styles.taskDraftHeading}>
+                          <div><strong>Review before creating</strong><span>This adds an ordinary staff task; it does not execute the recommendation.</span></div>
+                          <button type="button" className={styles.closeDraftButton} onClick={() => { setTaskDraft(null); setTaskError(""); }} aria-label="Cancel task draft"><X size={15} /></button>
+                        </div>
+                        <label>Task title
+                          <input value={taskDraft.title} onChange={event => setTaskDraft(current => current ? { ...current, title: event.target.value } : current)} required minLength={3} maxLength={240} />
+                        </label>
+                        <label>Task details
+                          <textarea value={taskDraft.summary} onChange={event => setTaskDraft(current => current ? { ...current, summary: event.target.value } : current)} required minLength={3} maxLength={3000} rows={5} />
+                        </label>
+                        <div className={styles.taskDraftFields}>
+                          <label>Priority
+                            <select value={taskDraft.priority} onChange={event => setTaskDraft(current => current ? { ...current, priority: event.target.value as TaskDraft["priority"] } : current)}>
+                              <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
+                            </select>
+                          </label>
+                          <label>Due date <span>(optional)</span>
+                            <input type="date" min={new Date().toLocaleDateString("en-CA")} value={taskDraft.dueDate} onChange={event => setTaskDraft(current => current ? { ...current, dueDate: event.target.value } : current)} />
+                          </label>
+                        </div>
+                        <div className={styles.taskDraftActions}>
+                          <button type="button" className={styles.cancelDraftButton} onClick={() => { setTaskDraft(null); setTaskError(""); }}>Cancel</button>
+                          <button type="submit" className={styles.confirmTaskButton} disabled={savingTask || taskDraft.title.trim().length < 3 || taskDraft.summary.trim().length < 3}>
+                            <ClipboardCheck size={14} /> {savingTask ? "Creating task…" : "Confirm & create task"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </article>
                 ))}
               </div>
