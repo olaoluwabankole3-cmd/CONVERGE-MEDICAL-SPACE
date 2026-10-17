@@ -11,7 +11,13 @@ A multi-hospital operations workspace built with Next.js, TypeScript, and Supaba
 - Hospital onboarding form at `/onboarding`.
 - Initial multi-hospital database schema for hospitals, memberships, work items, and audit events.
 - Row Level Security (RLS) policies intended to scope operational records to active hospital membership.
-- Hospital registrations begin in `pending` status and must be approved before operational records become accessible.\n- Hospital team page at `/team` for owners and administrators to inspect memberships, invite colleagues, update non-owner roles, and revoke hospital memberships.\n- Hospital settings at `/settings` for authorised administrators to update organisation details with an audit event.\n- Operational reports at `/reports` with status/type filters and a CSV export.\n- Patient reference directory at `/patients`, designed around hospital references and care area rather than names or clinical notes.\n- Persistent work-item creation with type, priority, external reference, due date, status transitions, and audit events.\n- GitHub Actions validation workflow for ESLint and a production build.
+- Hospital registrations begin in `pending` status and must be approved before operational records become accessible.
+- Hospital team page at `/team` for owners and administrators to inspect memberships, invite colleagues, update non-owner roles, and revoke hospital memberships.
+- Hospital settings at `/settings` for authorised administrators to update organisation details with an audit event.
+- Operational reports at `/reports` with status/type filters and a CSV export.
+- Patient reference directory at `/patients`, designed around hospital references and care area rather than names or clinical notes.
+- Persistent work-item creation with type, priority, external reference, due date, status transitions, and audit events.
+- GitHub Actions validation workflow for ESLint and a production build.
 
 ## Configure Supabase and Vercel
 
@@ -30,8 +36,9 @@ Run these migrations in order in the intended Supabase project's SQL Editor. Ver
 
 1. `supabase/migrations/202610160001_initial_schema.sql` — core hospital, membership, work-item, audit-event tables and RLS policies.
 2. `supabase/migrations/202610170001_tenant_isolation_hardening.sql` — prevents records and memberships from being moved across hospital boundaries, and validates that assigned staff belong to the same active hospital.
+3. `supabase/migrations/202610170002_patient_reference_registry.sql` — adds a minimal hospital-scoped patient reference directory with RLS and immutable tenant scope.
 
-The second migration is additive and should be run after the initial schema. It is designed to be safe to rerun.
+The second migration is additive and should be run after the initial schema. It is designed to be safe to rerun. Run the third migration after the tenant-isolation migration if you want to use `/patients`.
 
 ## Local development
 
@@ -56,4 +63,10 @@ To enable the platform-admin hospital registration queue, configure these variab
 
 Keep `SUPABASE_SERVICE_ROLE_KEY` server-only: **never** prefix it with `NEXT_PUBLIC_`, expose it in browser code, or commit its value to GitHub. After setting the variables, redeploy the Vercel project. If the allowlist is empty or the service key is missing, the approval API fails closed.
 
-The approval console is available at `/admin/approvals`. Only an authenticated user whose email exactly matches an entry in `PLATFORM_ADMIN_EMAILS` can read or act on the queue.\n\nHospital team administration is available at `/team` after hospital activation. Hospital profile configuration is available at `/settings`, operational reports at `/reports`, and the reference-first directory at `/patients`. The patient directory requires the third migration listed above. The server-side API verifies the signed-in user’s hospital membership and owner/admin role before listing team members or creating invitations. Invitations use Supabase Auth email delivery, so configure SMTP/email delivery and the Auth redirect allowlist before testing. A hospital owner can invite administrators; hospital admins can invite non-admin roles.\n\n## Current development boundary\n\nThis build is an operational foundation, not a production clinical system. Verify email invitations, role-based permissions, tenant isolation, build output, and audit logging before using real operational or patient data. Some admin and membership flows require the service-role key on the server. Never expose that key to browser code.
+The approval console is available at `/admin/approvals`. Only an authenticated user whose email exactly matches an entry in `PLATFORM_ADMIN_EMAILS` can read or act on the queue.
+
+Hospital team administration is available at `/team` after hospital activation. Hospital profile configuration is available at `/settings`, operational reports at `/reports`, and the reference-first directory at `/patients`. The patient directory requires the third migration listed above. The server-side API verifies the signed-in user’s hospital membership and owner/admin role before listing team members or creating invitations. Invitations use Supabase Auth email delivery, so configure SMTP/email delivery and the Auth redirect allowlist before testing. A hospital owner can invite administrators; hospital admins can invite non-admin roles.
+
+## Current development boundary
+
+This build is an operational foundation, not a production clinical system. Verify email invitations, role-based permissions, tenant isolation, build output, and audit logging before using real operational or patient data. Some admin and membership flows require the service-role key on the server. Never expose that key to browser code.
