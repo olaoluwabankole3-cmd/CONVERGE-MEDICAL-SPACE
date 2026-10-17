@@ -337,6 +337,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     hospital: resolved.hospital,
+    role: resolved.role,
     generatedAt: new Date(now).toISOString(),
     mode,
     note,
