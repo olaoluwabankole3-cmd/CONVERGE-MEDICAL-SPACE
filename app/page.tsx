@@ -294,16 +294,16 @@ export default function Home() {
         <div className="nav-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
           <a className="nav-item active" href="#"><LayoutDashboard size={18} /><span>Overview</span><i className="active-dot" /></a>
-          <a className="nav-item" href="#work"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
-          <a className="nav-item" href="/patients"><Users size={18} /><span>Patient references</span></a><a className="nav-item" href="#work"><CalendarDays size={18} /><span>Appointments</span></a>
-          <a className="nav-item" href="#work"><CheckCircle2 size={18} /><span>Follow-ups & tasks</span></a>
-          <a className="nav-item" href="#attention"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
+          <a className="nav-item" href="/work?type=access_case"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
+          <a className="nav-item" href="/patients"><Users size={18} /><span>Patient references</span></a><a className="nav-item" href="/work?type=appointment"><CalendarDays size={18} /><span>Appointments</span></a>
+          <a className="nav-item" href="/work?type=follow_up"><CheckCircle2 size={18} /><span>Follow-ups & tasks</span></a>
+          <a className="nav-item" href="/work?type=exception"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
         </nav>
         <div className="nav-label">GOVERNANCE</div>
         <nav className="nav-list" aria-label="Governance navigation">
-          <a className="nav-item" href="#ai"><WandSparkles size={18} /><span>AI agents</span></a>
-          <a className="nav-item" href="#attention"><ShieldCheck size={18} /><span>Approvals</span></a>
-          <a className="nav-item" href="#activity"><FileClock size={18} /><span>Audit history</span></a>
+          <a className="nav-item" href="/ai-agents"><WandSparkles size={18} /><span>AI agents</span></a>
+          <a className="nav-item" href="/admin/approvals"><ShieldCheck size={18} /><span>Approvals</span></a>
+          <a className="nav-item" href="/audit"><FileClock size={18} /><span>Audit history</span></a>
           <a className="nav-item" href="/reports"><Activity size={18} /><span>Reports & analytics</span></a>
         </nav>
         <div className="sidebar-bottom"><a className="nav-item" href="/team"><Settings2 size={18} /><span>Team & access</span></a><a className="nav-item" href="/settings"><Stethoscope size={18} /><span>Hospital settings</span></a><div className="profile"><div className="avatar">{(userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase()}</div><div className="profile-copy"><strong>{userEmail || "Signed-in user"}</strong><span>{role.replace("_", " ")} · workspace access</span></div><button className="icon-button subtle" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button></div></div>
