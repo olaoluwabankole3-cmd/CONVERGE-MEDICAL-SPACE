@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -21,7 +21,7 @@ async function context() {
   return { user, admin };
 }
 
-async function authorised(hospitalId: string, userId: string, admin: ReturnType<typeof createClient>) {
+async function authorised(hospitalId: string, userId: string, admin: SupabaseClient) {
   const { data: membership, error: membershipError } = await admin.from("hospital_memberships")
     .select("role").eq("hospital_id", hospitalId).eq("user_id", userId).maybeSingle();
   if (membershipError) return { error: NextResponse.json({ error: "Unable to verify hospital permissions." }, { status: 500 }) };
