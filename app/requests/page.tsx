@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Clock3, MessageCircle, RefreshCw, Send, ShieldCheck, UserRound, XCircle } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck, UserRound, XCircle } from "lucide-react";
 
 type StaffMessage = { id: string; author_user_id: string; author_type: string; visibility: string; body: string; created_at: string };
 type StaffAppointment = {
@@ -36,13 +36,6 @@ function toIso(value: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-function dateInput(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return shifted.toISOString().slice(0, 16);
 }
 
 export default function HospitalRequestsPage() {
@@ -166,7 +159,7 @@ export default function HospitalRequestsPage() {
       <div className="staff-request-metrics">
         <div><span>Open requests</span><strong>{requests.filter(item => !terminal.has(item.status)).length}</strong><small>Awaiting an outcome</small></div>
         <div><span>Need a response</span><strong>{requests.filter(item => ["submitted", "awaiting_hospital", "cancellation_requested"].includes(item.status)).length}</strong><small>Operational attention</small></div>
-        <div><span>Appointment requests</span><strong>{requests.filter(item => item.request_type === "appointment" && !terminal.has(item.status)).length}</strong><small>Request, don't auto-book</small></div>
+        <div><span>Appointment requests</span><strong>{requests.filter(item => item.request_type === "appointment" && !terminal.has(item.status)).length}</strong><small>Request, don&apos;t auto-book</small></div>
       </div>
 
       <div className="staff-requests-layout">
