@@ -113,3 +113,68 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json({ member: { user_id: invitedUserId, email, role }, warning: auditError ? "Membership was added, but the audit event could not be recorded." : undefined }, { status: 201 });
 }
+
+export async function PATCH(request: NextRequest) {
+  const clients = await getClients();
+  if ("response" in clients) return clients.response;
+  let body: { hospitalId?: unknown; userId?: unknown; role?: unknown };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid request body." }, { status: 400 }); }
+  const hospitalId = typeof body.hospitalId === "string" ? body.hospitalId : "";
+  const targetUserId = typeof body.userId === "string" ? body.userId : "";
+  const nextRole = typeof body.role === "string" ? body.role : "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(hospitalId)
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetUserId)
+      || !allowedRoles.includes(nextRole as InviteRole)) {
+    return NextResponse.json({ error: "Provide a valid hospital, member, and supported role." }, { status: 400 });
+  }
+  if (targetUserId === clients.user.id) return NextResponse.json({ error: "You cannot change your own role here." }, { status: 409 });
+  const { data: actor, error: actorError } = await clients.admin.from("hospital_memberships")
+    .select("role").eq("hospital_id", hospitalId).eq("user_id", clients.user.id).maybeSingle();
+  if (actorError) return NextResponse.json({ error: "Unable to verify your hospital role." }, { status: 500 });
+  if (!actor || !["owner", "admin"].includes(actor.role)) return NextResponse.json({ error: "Hospital administrator permission is required." }, { status: 403 });
+  if (nextRole === "admin" && actor.role !== "owner") return NextResponse.json({ error: "Only the hospital owner can assign administrator access." }, { status: 403 });
+  const { data: target, error: targetError } = await clients.admin.from("hospital_memberships")
+    .select("role").eq("hospital_id", hospitalId).eq("user_id", targetUserId).maybeSingle();
+  if (targetError) return NextResponse.json({ error: "Unable to verify the selected member." }, { status: 500 });
+  if (!target) return NextResponse.json({ error: "That user is not a member of this hospital." }, { status: 404 });
+  if (target.role === "owner") return NextResponse.json({ error: "The hospital owner role cannot be changed here." }, { status: 409 });
+  if (actor.role !== "owner" && target.role === "admin") return NextResponse.json({ error: "Administrators cannot change another administrator's role." }, { status: 403 });
+  const { error: updateError } = await clients.admin.from("hospital_memberships")
+    .update({ role: nextRole }).eq("hospital_id", hospitalId).eq("user_id", targetUserId);
+  if (updateError) return NextResponse.json({ error: "Unable to update this member's role." }, { status: 500 });
+  const { error: auditError } = await clients.admin.from("audit_events").insert({
+    hospital_id: hospitalId, actor_id: clients.user.id, entity_type: "hospital_membership",
+    entity_id: targetUserId, action: "team_member_role_changed", details: { previous_role: target.role, role: nextRole },
+  });
+  return NextResponse.json({ success: true, warning: auditError ? "Role updated, but the audit event could not be recorded." : undefined });
+}
+
+export async function DELETE(request: NextRequest) {
+  const clients = await getClients();
+  if ("response" in clients) return clients.response;
+  const hospitalId = request.nextUrl.searchParams.get("hospitalId") ?? "";
+  const targetUserId = request.nextUrl.searchParams.get("userId") ?? "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(hospitalId)
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetUserId)) {
+    return NextResponse.json({ error: "A valid hospital and member are required." }, { status: 400 });
+  }
+  if (targetUserId === clients.user.id) return NextResponse.json({ error: "You cannot remove your own membership here." }, { status: 409 });
+  const { data: actor, error: actorError } = await clients.admin.from("hospital_memberships")
+    .select("role").eq("hospital_id", hospitalId).eq("user_id", clients.user.id).maybeSingle();
+  if (actorError) return NextResponse.json({ error: "Unable to verify your hospital role." }, { status: 500 });
+  if (!actor || !["owner", "admin"].includes(actor.role)) return NextResponse.json({ error: "Hospital administrator permission is required." }, { status: 403 });
+  const { data: target, error: targetError } = await clients.admin.from("hospital_memberships")
+    .select("role").eq("hospital_id", hospitalId).eq("user_id", targetUserId).maybeSingle();
+  if (targetError) return NextResponse.json({ error: "Unable to verify the selected member." }, { status: 500 });
+  if (!target) return NextResponse.json({ error: "That user is not a member of this hospital." }, { status: 404 });
+  if (target.role === "owner") return NextResponse.json({ error: "The hospital owner cannot be removed from the team here." }, { status: 409 });
+  if (actor.role !== "owner" && target.role === "admin") return NextResponse.json({ error: "Administrators cannot remove another administrator." }, { status: 403 });
+  const { error: deleteError } = await clients.admin.from("hospital_memberships")
+    .delete().eq("hospital_id", hospitalId).eq("user_id", targetUserId);
+  if (deleteError) return NextResponse.json({ error: "Unable to remove this member." }, { status: 500 });
+  const { error: auditError } = await clients.admin.from("audit_events").insert({
+    hospital_id: hospitalId, actor_id: clients.user.id, entity_type: "hospital_membership",
+    entity_id: targetUserId, action: "team_member_removed", details: { previous_role: target.role },
+  });
+  return NextResponse.json({ success: true, warning: auditError ? "Member removed, but the audit event could not be recorded." : undefined });
+}
