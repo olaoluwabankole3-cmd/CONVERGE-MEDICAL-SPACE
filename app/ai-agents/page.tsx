@@ -7,6 +7,7 @@ import {
   CheckCircle2, Clock3, RefreshCw, ShieldCheck, Users, Workflow, ClipboardCheck, X,
 } from "lucide-react";
 import styles from "./ops.module.css";
+import StaffAssignmentSelect from "./StaffAssignmentSelect";
 
 type Insight = {
   title: string;
@@ -292,6 +293,13 @@ export default function AIAgentsPage() {
                         <label>Task details
                           <textarea value={taskDraft.summary} onChange={event => setTaskDraft(current => current ? { ...current, summary: event.target.value } : current)} required minLength={3} maxLength={3000} rows={5} />
                         </label>
+                        {data && (
+                          <StaffAssignmentSelect
+                            hospitalId={data.hospital.id}
+                            value={taskDraft.ownerUserId}
+                            onChange={ownerUserId => setTaskDraft(current => current ? { ...current, ownerUserId } : current)}
+                          />
+                        )}
                         <div className={styles.taskDraftFields}>
                           <label>Priority
                             <select value={taskDraft.priority} onChange={event => setTaskDraft(current => current ? { ...current, priority: event.target.value as TaskDraft["priority"] } : current)}>
