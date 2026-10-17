@@ -119,7 +119,7 @@ create table if not exists public.appointments (
   check (end_at > start_at),
   check (
     status <> 'confirmed'
-    or (confirmed_by is not null and confirmed_at is not null)
+    or confirmed_at is not null
   )
 );
 
