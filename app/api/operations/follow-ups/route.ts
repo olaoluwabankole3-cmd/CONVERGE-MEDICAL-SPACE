@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 const ALLOWED_ROLES = new Set(["owner", "admin", "clinician", "operations"]);
 const PRIORITIES = new Set(["low", "medium", "high", "urgent"]);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function parseDueAt(value: unknown): string | null | undefined {
   if (value === null || value === undefined || value === "") return null;
@@ -14,6 +15,56 @@ function parseDueAt(value: unknown): string | null | undefined {
   if (Number.isNaN(date.getTime())) return undefined;
   if (date.getTime() <= Date.now()) return undefined;
   return date.toISOString();
+}
+
+function userLabel(user: { email?: string; user_metadata?: Record<string, unknown> } | null, userId: string) {
+  const metadata = user?.user_metadata ?? {};
+  const display = [metadata.full_name, metadata.name, metadata.display_name]
+    .find(value => typeof value === "string" && value.trim().length > 0);
+  if (typeof display === "string") return display.trim().slice(0, 120);
+  return user?.email || `Hospital staff · ${userId.slice(0, 8)}`;
+}
+
+export async function GET(request: NextRequest) {
+  const context = await getAuthenticatedAdminContext();
+  if ("response" in context) return context.response;
+
+  const hospitalId = request.nextUrl.searchParams.get("hospitalId") ?? "";
+  if (!UUID_PATTERN.test(hospitalId)) {
+    return NextResponse.json({ error: "A valid hospital workspace is required." }, { status: 400 });
+  }
+
+  const resolved = await resolveActiveHospital(context.admin, context.user.id, hospitalId);
+  if ("response" in resolved) return resolved.response;
+  if (!ALLOWED_ROLES.has(resolved.role)) {
+    return NextResponse.json({ error: "Your hospital role cannot create or assign follow-up tasks." }, { status: 403 });
+  }
+
+  const { data: memberships, error } = await context.admin
+    .from("hospital_memberships")
+    .select("user_id,role")
+    .eq("hospital_id", resolved.hospital.id)
+    .in("role", ["owner", "admin", "clinician", "operations"])
+    .order("role", { ascending: true })
+    .limit(200);
+
+  if (error) {
+    return NextResponse.json({ error: "Unable to load operational staff for assignment." }, { status: 500 });
+  }
+
+  const members = await Promise.all((memberships ?? []).map(async member => {
+    const { data } = await context.admin.auth.admin.getUserById(member.user_id);
+    return {
+      userId: member.user_id,
+      role: member.role,
+      displayName: userLabel(data.user, member.user_id),
+    };
+  }));
+
+  return NextResponse.json({
+    hospitalId: resolved.hospital.id,
+    members,
+  }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
@@ -35,9 +86,12 @@ export async function POST(request: NextRequest) {
     : "";
   const priority = typeof body.priority === "string" ? body.priority : "medium";
   const dueAt = parseDueAt(body.dueAt);
+  const ownerUserId = body.ownerUserId === null || body.ownerUserId === undefined || body.ownerUserId === ""
+    ? null
+    : typeof body.ownerUserId === "string" ? body.ownerUserId : undefined;
 
-  if (!hospitalId) {
-    return NextResponse.json({ error: "A hospital workspace is required." }, { status: 400 });
+  if (!UUID_PATTERN.test(hospitalId)) {
+    return NextResponse.json({ error: "A valid hospital workspace is required." }, { status: 400 });
   }
   if (title.length < 3 || title.length > 240) {
     return NextResponse.json({ error: "Task title must be between 3 and 240 characters." }, { status: 400 });
@@ -54,6 +108,9 @@ export async function POST(request: NextRequest) {
   if (dueAt === undefined) {
     return NextResponse.json({ error: "Choose a valid future due date or leave it blank." }, { status: 400 });
   }
+  if (ownerUserId === undefined || (ownerUserId !== null && !UUID_PATTERN.test(ownerUserId))) {
+    return NextResponse.json({ error: "Choose a valid staff member or leave the task unassigned." }, { status: 400 });
+  }
 
   const resolved = await resolveActiveHospital(context.admin, context.user.id, hospitalId);
   if ("response" in resolved) return resolved.response;
@@ -61,7 +118,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Your hospital role is read-only for task creation." }, { status: 403 });
   }
 
-  const { data, error } = await context.admin.rpc("create_operations_follow_up_task", {
+  const { data, error } = await context.admin.rpc("create_assigned_operations_follow_up_task", {
     p_actor_user_id: context.user.id,
     p_hospital_id: resolved.hospital.id,
     p_title: title,
@@ -69,6 +126,7 @@ export async function POST(request: NextRequest) {
     p_priority: priority,
     p_due_at: dueAt,
     p_source_recommendation: sourceRecommendation,
+    p_owner_user_id: ownerUserId,
   });
 
   if (error) {
