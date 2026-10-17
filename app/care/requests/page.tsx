@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Clock3, MessageCircle, RefreshCw, Send, ShieldCheck, XCircle } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck, XCircle } from "lucide-react";
 
 type Service = {
   id: string; name: string; description: string | null; department: string | null;
@@ -238,7 +238,7 @@ export default function PatientRequestsPage() {
                 <label>Your name<input autoComplete="name" required minLength={2} maxLength={160} value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Full name" /></label>
                 <label>Contact phone <span className="care-optional">Optional</span><input autoComplete="tel" value={phoneNumber} onChange={event => setPhoneNumber(event.target.value)} maxLength={32} placeholder="Phone number for hospital contact" /></label>
                 <label>Message to the hospital <span className="care-optional">Optional</span><textarea value={patientMessage} onChange={event => setPatientMessage(event.target.value)} maxLength={3000} rows={4} placeholder="Add information the hospital needs to review your request." /></label>
-                <p className="care-privacy-note"><ShieldCheck size={14} /> Your message is shared with the selected hospital's authorised team. This portal is not for emergencies.</p>
+                <p className="care-privacy-note"><ShieldCheck size={14} /> Your message is shared with the selected hospital&apos;s authorised team. This portal is not for emergencies.</p>
                 <button className="care-button-primary wide" type="submit" disabled={submitting || !selectedService}>{submitting ? "Submitting request…" : "Submit request"} {!submitting && <ArrowRight size={16} />}</button>
               </form>
             )}
