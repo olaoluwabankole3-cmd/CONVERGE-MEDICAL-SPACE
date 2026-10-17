@@ -84,6 +84,40 @@ export default function HospitalTeamPage() {
     } finally { setSaving(false); }
   }
 
+  async function changeMemberRole(member: Member, nextRole: string) {
+    if (!hospital || !member.user_id || member.role === "owner" || nextRole === member.role) return;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/hospital/team", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hospitalId: hospital.id, userId: member.user_id, role: nextRole }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Could not update the member role.");
+      setNotice(payload.warning ?? `${member.email || "Team member"}'s role was updated to ${nextRole}.`);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not update the member role.");
+      await load();
+    } finally { setSaving(false); }
+  }
+
+  async function removeMember(member: Member) {
+    if (!hospital || !member.user_id || member.role === "owner") return;
+    if (!window.confirm(`Remove ${member.email || "this member"} from ${hospital.name}? Their account will remain, but this hospital membership will be revoked.`)) return;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const params = new URLSearchParams({ hospitalId: hospital.id, userId: member.user_id });
+      const response = await fetch(`/api/hospital/team?${params.toString()}`, { method: "DELETE" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Could not remove this member.");
+      setNotice(payload.warning ?? `${member.email || "Team member"} was removed from this hospital.`);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not remove this member.");
+    } finally { setSaving(false); }
+  }
+
   const canManage = ["owner", "admin"].includes(role);
   return (
     <main className="onboarding-page">
@@ -121,7 +155,12 @@ export default function HospitalTeamPage() {
                 {members.map(member => <div key={member.user_id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", borderBottom: "1px solid var(--line, #e5ebef)" }}>
                   <span className="onboarding-icon" style={{ width: 36, height: 36, flexShrink: 0 }}><Users size={16} /></span>
                   <div style={{ minWidth: 0, flex: 1 }}><strong style={{ display: "block", overflowWrap: "anywhere", fontSize: 13 }}>{member.email || "Invited account"}</strong><span style={{ color: "var(--muted, #72818d)", fontSize: 12 }}>{member.role.replaceAll("_", " ")}{member.created_at ? ` · Added ${new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(member.created_at))}` : ""}</span></div>
-                  {member.role === "owner" && <span className="approval-pending">Owner</span>}
+                  {member.role === "owner" ? <span className="approval-pending">Owner</span> : <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <select aria-label={`Role for ${member.email || "team member"}`} value={member.role} disabled={saving || (role !== "owner" && member.role === "admin")} onChange={event => void changeMemberRole(member, event.target.value)} style={{ border: "1px solid var(--line, #e5ebef)", borderRadius: 7, padding: "7px 8px", maxWidth: 135, background: "#fff", fontSize: 12 }}>
+                      {roles.filter(item => item.value !== "admin" || role === "owner" || member.role === "admin").map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                    <button type="button" className="approval-reject" disabled={saving || (role !== "owner" && member.role === "admin")} onClick={() => void removeMember(member)} style={{ padding: "7px 9px", fontSize: 11 }}>Remove</button>
+                  </div>}
                 </div>)}
                 {members.length === 0 && <p style={{ color: "var(--muted, #72818d)", fontSize: 13 }}>No memberships are visible yet.</p>}
               </div>
