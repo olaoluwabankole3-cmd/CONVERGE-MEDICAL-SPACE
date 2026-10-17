@@ -56,6 +56,11 @@ function formatTime(value: string) {
       }).format(date);
 }
 
+function localDateString() {
+  const date = new Date();
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
 function label(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, char => char.toUpperCase());
 }
@@ -128,7 +133,7 @@ export default function AIAgentsPage() {
       sourceKey: insight.title + "-" + index,
       sourceRecommendation: insight.title,
       title: ("Follow up: " + insight.title).slice(0, 240),
-      summary: "Evidence: " + insight.evidence + "\\n\\nReviewed next step: " + insight.recommendation,
+      summary: "Evidence: " + insight.evidence + String.fromCharCode(10) + String.fromCharCode(10) + "Reviewed next step: " + insight.recommendation,
       priority: insight.priority === "high" ? "high" : insight.priority === "low" ? "low" : "medium",
       dueDate: "",
     });
@@ -292,7 +297,7 @@ export default function AIAgentsPage() {
                             </select>
                           </label>
                           <label>Due date <span>(optional)</span>
-                            <input type="date" min={new Date().toLocaleDateString("en-CA")} value={taskDraft.dueDate} onChange={event => setTaskDraft(current => current ? { ...current, dueDate: event.target.value } : current)} />
+                            <input type="date" min={localDateString()} value={taskDraft.dueDate} onChange={event => setTaskDraft(current => current ? { ...current, dueDate: event.target.value } : current)} />
                           </label>
                         </div>
                         <div className={styles.taskDraftActions}>
