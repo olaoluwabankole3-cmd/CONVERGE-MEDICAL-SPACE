@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     hospital_id: hospitalId, actor_id: clients.user.id, entity_type: "hospital_membership",
     entity_id: invitedUserId, action: "team_member_invited", details: { email, role },
   });
-  return NextResponse.json({ member: { user_id: invitedUserId, email, role }, warning: auditError ? "Membership was added, but the audit event could not be recorded." : undefined }, { status: 201 });
+  return NextResponse.json({ member: { user_id: invitedUserId, email, role }, message: existing ? "Existing account added to this hospital workspace." : "Invitation email sent through Supabase Auth.", warning: auditError ? "Membership was added, but the audit event could not be recorded." : undefined }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
