@@ -15,7 +15,7 @@ type Insight = {
   recommendation: string;
 };
 
-type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string };
+type TaskDraft = { sourceKey: string; sourceRecommendation: string; title: string; summary: string; priority: "low" | "medium" | "high" | "urgent"; dueDate: string; ownerUserId: string };\n\ntype StaffOption = { userId: string; role: string; displayName: string };
 
 type OperationsData = {
   role: string;
@@ -98,7 +98,7 @@ export default function AIAgentsPage() {
   const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
   const [savingTask, setSavingTask] = useState(false);
   const [taskError, setTaskError] = useState("");
-  const [taskNotice, setTaskNotice] = useState("");
+  const [taskNotice, setTaskNotice] = useState("");\n  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);\n  const [loadingStaff, setLoadingStaff] = useState(false);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -126,9 +126,11 @@ export default function AIAgentsPage() {
   const metrics = data?.metrics;
   const canCreateTask = !!data && ["owner", "admin", "clinician", "operations"].includes(data.role);
 
-  function draftFollowUp(insight: Insight, index: number) {
+  async function draftFollowUp(insight: Insight, index: number) {
+    if (!data) return;
     setTaskError("");
     setTaskNotice("");
+    setStaffOptions([]);
     setTaskDraft({
       sourceKey: insight.title + "-" + index,
       sourceRecommendation: insight.title,
@@ -136,7 +138,23 @@ export default function AIAgentsPage() {
       summary: "Evidence: " + insight.evidence + String.fromCharCode(10) + String.fromCharCode(10) + "Reviewed next step: " + insight.recommendation,
       priority: insight.priority === "high" ? "high" : insight.priority === "low" ? "low" : "medium",
       dueDate: "",
+      ownerUserId: "",
     });
+    setLoadingStaff(true);
+    try {
+      const response = await fetch("/api/operations/follow-ups?hospitalId=" + encodeURIComponent(data.hospital.id), { cache: "no-store" });
+      const payload = await response.json();
+      if (response.status === 401) {
+        window.location.assign("/login");
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error ?? "Unable to load hospital staff for assignment.");
+      setStaffOptions((payload.members ?? []) as StaffOption[]);
+    } catch (cause) {
+      setTaskError(cause instanceof Error ? cause.message : "Unable to load hospital staff for assignment.");
+    } finally {
+      setLoadingStaff(false);
+    }
   }
 
   async function saveFollowUpTask(event: FormEvent<HTMLFormElement>) {
@@ -289,6 +307,12 @@ export default function AIAgentsPage() {
                         </label>
                         <label>Task details
                           <textarea value={taskDraft.summary} onChange={event => setTaskDraft(current => current ? { ...current, summary: event.target.value } : current)} required minLength={3} maxLength={3000} rows={5} />
+                        </label>
+                        <label>Assign to <span>(optional)</span>
+                          <select value={taskDraft.ownerUserId} disabled={loadingStaff} onChange={event => setTaskDraft(current => current ? { ...current, ownerUserId: event.target.value } : current)}>
+                            <option value="">{loadingStaff ? "Loading active staff…" : "Leave unassigned"}</option>
+                            {staffOptions.map(member => <option key={member.userId} value={member.userId}>{member.displayName} · {label(member.role)}</option>)}
+                          </select>
                         </label>
                         <div className={styles.taskDraftFields}>
                           <label>Priority
