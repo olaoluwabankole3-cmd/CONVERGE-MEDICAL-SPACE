@@ -261,7 +261,7 @@ export default function Home() {
           <a className="nav-item" href="#activity"><FileClock size={18} /><span>Audit history</span></a>
           <a className="nav-item" href="/reports"><Activity size={18} /><span>Reports & analytics</span></a>
         </nav>
-        <div className="sidebar-bottom"><a className="nav-item" href="/team"><Settings2 size={18} /><span>Team & access</span></a><div className="profile"><div className="avatar">{(userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase()}</div><div className="profile-copy"><strong>{userEmail || "Signed-in user"}</strong><span>{role.replace("_", " ")} · workspace access</span></div><button className="icon-button subtle" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button></div></div>
+        <div className="sidebar-bottom"><a className="nav-item" href="/team"><Settings2 size={18} /><span>Team & access</span></a><a className="nav-item" href="/settings"><Stethoscope size={18} /><span>Hospital settings</span></a><div className="profile"><div className="avatar">{(userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase()}</div><div className="profile-copy"><strong>{userEmail || "Signed-in user"}</strong><span>{role.replace("_", " ")} · workspace access</span></div><button className="icon-button subtle" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button></div></div>
       </aside>
 
       <section className="main-area">
