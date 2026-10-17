@@ -91,7 +91,7 @@ export default function PlatformApprovalsPage() {
             {rejecting?.id === hospital.id && <form className="approval-rejection" onSubmit={event => { event.preventDefault(); if (reason.trim()) void decide(hospital, "rejected", reason.trim()); }}><label>Reason for rejection<textarea required minLength={3} maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} placeholder="Explain what needs to be corrected before resubmission." rows={3} /></label><div><button className="approval-reject" type="button" onClick={() => setRejecting(null)}>Cancel</button><button className="auth-submit" type="submit" disabled={!reason.trim() || !!busyId}>{busyId === hospital.id ? "Saving…" : "Confirm rejection"}</button></div></form>}
           </article>)}
         </div>
-        <p className="onboarding-disclaimer">This is a registration review control, not an independent regulatory verification service. Confirm official details through your organisation's approved verification process before activating access.</p>
+        <p className="onboarding-disclaimer">This is a registration review control, not an independent regulatory verification service. Confirm official details through your organisation&apos;s approved verification process before activating access.</p>
       </div>
     </main>
   );
