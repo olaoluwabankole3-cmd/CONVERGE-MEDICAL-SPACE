@@ -39,8 +39,9 @@ Run these migrations in order in the intended Supabase project's SQL Editor. Ver
 3. `supabase/migrations/202610170002_patient_reference_registry.sql` — adds a minimal hospital-scoped patient reference directory with RLS and immutable tenant scope.
 4. `supabase/migrations/202610180001_link_work_items_to_patient_references.sql` — links internal work items to active patient references within the same hospital.
 5. `supabase/migrations/202610180002_restrict_client_table_privileges.sql` — removes excessive direct table/sequence privileges from `anon` and `authenticated`, and removes the broad membership-management RLS policy. Intended server-side team operations continue through the authenticated API.
+6. `supabase/migrations/202610180003_patient_request_core.sql` — adds patient profiles, hospital services, canonical patient requests, structured appointment records, request links on work items, lifecycle validation, and read-only authenticated RLS policies for patient owners and hospital staff.
 
-Apply these migrations in order on a fresh database. For an existing database, first verify which of the previous migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. The fifth migration is now committed to the repository but must still be run manually in the intended Supabase project's SQL Editor before relying on the tightened permissions.
+Apply these migrations in order on a fresh database. For an existing database, first verify which of the previous migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. The sixth migration defines the request/appointment data model only; the patient-facing pages, server APIs, notification delivery, and AI operations workflow must be implemented and tested separately. Do not use real patient data until these routes and access controls have been verified.
 
 ## Local development
 
