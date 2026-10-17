@@ -87,7 +87,7 @@ function buildMetrics(
     needsHospitalResponse: requests.filter(row => WAITING_FOR_HOSPITAL.has(row.status)).length,
     awaitingPatient: requests.filter(row => row.status === "awaiting_patient" || row.status === "appointment_proposed").length,
     waitingOnHospitalOver24Hours: requests.filter(row =>
-      WAITING_FOR_HOSPITAL.has(row.status) && ageHours(row.submitted_at, now) >= 24,
+      WAITING_FOR_HOSPITAL.has(row.status) && ageHours(row.updated_at, now) >= 24,
     ).length,
     overdueFollowUps: workItems.filter(row =>
       (row.item_type === "follow_up" || row.item_type === "task") &&
@@ -114,7 +114,7 @@ function buildRuleBasedAnalysis(metrics: OperationalMetrics): Analysis {
     insights.push({
       title: "Requests are waiting for a hospital response",
       priority: "high",
-      evidence: `${metrics.waitingOnHospitalOver24Hours} request(s) in a hospital-response state have been open for at least 24 hours.`,
+      evidence: `${metrics.waitingOnHospitalOver24Hours} request(s) in a hospital-response state have not been updated for at least 24 hours.`,
       recommendation: "Review the oldest requests first and assign an accountable staff member for each outstanding response.",
     });
     nextSteps.push("Triage the oldest requests and record an owner for each next step.");
