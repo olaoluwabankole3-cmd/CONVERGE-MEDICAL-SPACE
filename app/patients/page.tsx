@@ -132,7 +132,7 @@ export default function PatientReferencesPage() {
             <label style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line, #e5ebef)", borderRadius: 8, padding: "9px 11px", flex: "1 1 240px" }}><Search size={16} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search reference, external ID, care area" style={{ border: 0, outline: 0, width: "100%", minWidth: 0 }} /></label>
             <div style={{ display: "flex", gap: 6 }}>{(["active", "archived", "all"] as const).map(value => <button key={value} className={filter === value ? "auth-submit" : "onboarding-signout"} style={{ width: "auto", textTransform: "capitalize" }} onClick={() => setFilter(value)}>{value}</button>)}</div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.5fr) minmax(230px,1fr)", gap: 18, marginTop: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 18, marginTop: 18 }}>
             <div style={{ border: "1px solid var(--line, #e5ebef)", borderRadius: 10, overflow: "hidden" }}>
               <div style={{ overflowX: "auto" }}><table style={{ width: "100%", minWidth: 500, borderCollapse: "collapse", textAlign: "left" }}>
                 <thead><tr>{["Reference", "Care area", "Status", "Updated"].map(label => <th key={label} style={{ padding: "12px 10px", fontSize: 10, color: "var(--muted, #72818d)", borderBottom: "1px solid var(--line, #e5ebef)" }}>{label.toUpperCase()}</th>)}</tr></thead>
