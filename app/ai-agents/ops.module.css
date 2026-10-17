@@ -132,3 +132,31 @@
   .privacyPanel { grid-column: auto; }
   .footer { align-items: flex-start; flex-direction: column; }
 }
+
+
+.taskNotice { max-width: 1346px; margin: 0 auto 17px; padding: 12px 14px; display: flex; align-items: center; gap: 9px; border: 1px solid #d7ebe1; border-radius: 9px; background: #eef8f2; color: #347b66; font-size: 10px; line-height: 1.55; }
+.taskNotice > span { flex: 1; }
+.taskNotice button { border: 0; background: transparent; color: #5b8c7c; display: grid; place-items: center; padding: 3px; }
+.draftTaskButton { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 9px 11px; border: 1px solid #d7e8e2; border-radius: 7px; background: #fff; color: #267d72; font-size: 9px; font-weight: 800; }
+.draftTaskButton:hover { background: #f0f8f4; border-color: #b8dcd0; }
+.taskDraftForm { display: grid; gap: 12px; margin-top: 13px; border: 1px solid #d8e8e1; border-radius: 9px; padding: 14px; background: #f8fbf9; }
+.taskDraftHeading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.taskDraftHeading > div { display: grid; gap: 5px; }
+.taskDraftHeading strong { color: #315d5d; font-size: 11px; }
+.taskDraftHeading span { color: #829697; font-size: 9px; line-height: 1.5; }
+.closeDraftButton { border: 0; background: transparent; color: #7e9393; padding: 2px; display: grid; place-items: center; }
+.taskDraftForm label { display: grid; gap: 6px; color: #5e7a7e; font-size: 9px; font-weight: 800; }
+.taskDraftForm label > span { color: #8da0a1; font-weight: 400; }
+.taskDraftForm input, .taskDraftForm textarea, .taskDraftForm select { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #d9e6e1; border-radius: 7px; padding: 10px 11px; background: #fff; color: #294953; font: 400 10px Arial, Helvetica, sans-serif; outline: none; }
+.taskDraftForm textarea { resize: vertical; line-height: 1.6; }
+.taskDraftForm input:focus, .taskDraftForm textarea:focus, .taskDraftForm select:focus { border-color: #7dbbb0; box-shadow: 0 0 0 3px #278d7e12; }
+.taskDraftFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.taskDraftActions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
+.cancelDraftButton, .confirmTaskButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 35px; padding: 0 11px; border-radius: 7px; font-size: 9px; font-weight: 800; }
+.cancelDraftButton { background: white; border: 1px solid #dae7e2; color: #678286; }
+.confirmTaskButton { background: #147d77; color: white; border: 1px solid #147d77; }
+.confirmTaskButton:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 640px) {
+  .taskDraftFields { grid-template-columns: minmax(0, 1fr); }
+  .taskDraftActions > button { flex: 1; }
+}
