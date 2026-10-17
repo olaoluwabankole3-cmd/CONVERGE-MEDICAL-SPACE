@@ -415,7 +415,7 @@ begin
     end if;
   end if;
 
-  if new.status = 'confirmed' then
+  if new.status = 'confirmed' and old.status is distinct from new.status then
     select exists (
       select 1
       from public.hospital_memberships m
