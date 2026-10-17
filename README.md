@@ -26,7 +26,12 @@ Never place a Supabase secret/service-role key in a `NEXT_PUBLIC_` variable or c
 
 ## Database setup
 
-Run `supabase/migrations/202610160001_initial_schema.sql` once in the intended Supabase project's SQL Editor. Vercel does not execute this migration automatically.
+Run these migrations in order in the intended Supabase project's SQL Editor. Vercel does not execute migrations automatically.
+
+1. `supabase/migrations/202610160001_initial_schema.sql` — core hospital, membership, work-item, audit-event tables and RLS policies.
+2. `supabase/migrations/202610170001_tenant_isolation_hardening.sql` — prevents records and memberships from being moved across hospital boundaries, and validates that assigned staff belong to the same active hospital.
+
+The second migration is additive and should be run after the initial schema. It is designed to be safe to rerun.
 
 ## Local development
 
