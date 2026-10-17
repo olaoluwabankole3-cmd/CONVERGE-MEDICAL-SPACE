@@ -301,6 +301,10 @@ begin
       update public.patient_requests
         set status = 'under_review', updated_at = now()
         where id = request_row.id;
+      update public.work_items
+        set status = 'in_progress', updated_at = now()
+        where patient_request_id = request_row.id
+          and hospital_id = request_row.hospital_id;
     end if;
   elsif p_action = 'cancel_request' then
     if request_row.status in ('completed', 'no_show', 'cancelled', 'declined', 'cancellation_requested') then
