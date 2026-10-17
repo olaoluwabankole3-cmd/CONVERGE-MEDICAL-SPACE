@@ -295,7 +295,10 @@ export default function Home() {
         <nav className="nav-list" aria-label="Main navigation">
           <a className="nav-item active" href="#"><LayoutDashboard size={18} /><span>Overview</span><i className="active-dot" /></a>
           <a className="nav-item" href="/work?type=access_case"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
-          <a className="nav-item" href="/patients"><Users size={18} /><span>Patient references</span></a><a className="nav-item" href="/work?type=appointment"><CalendarDays size={18} /><span>Appointments</span></a>
+          <a className="nav-item" href="/patients"><Users size={18} /><span>Patient references</span></a>
+          <a className="nav-item" href="/requests"><ClipboardList size={18} /><span>Patient requests</span></a>
+          <a className="nav-item" href="/services"><Stethoscope size={18} /><span>Hospital services</span></a>
+          <a className="nav-item" href="/work?type=appointment"><CalendarDays size={18} /><span>Appointments</span></a>
           <a className="nav-item" href="/work?type=follow_up"><CheckCircle2 size={18} /><span>Follow-ups & tasks</span></a>
           <a className="nav-item" href="/work?type=exception"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
         </nav>
