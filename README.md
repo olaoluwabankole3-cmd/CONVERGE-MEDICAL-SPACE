@@ -74,3 +74,14 @@ Hospital team administration is available at `/team` after hospital activation. 
 ## Current development boundary
 
 This build is an operational foundation, not a production clinical system. Verify email invitations, role-based permissions, tenant isolation, build output, and audit logging before using real operational or patient data. Some admin and membership flows require the service-role key on the server. Never expose that key to browser code.
+\n
+## Governed operations analyst
+
+The `/ai-agents` workspace provides read-only administrative workflow signals. It calculates counts from patient request statuses, work-item ownership/priority/due dates, and appointment states. The optional AI narrative receives **aggregate metrics only**; it is not sent patient names, phone numbers, request subjects, patient messages, or clinical notes. If the AI provider is not configured or cannot return a valid response, the page displays explicitly labelled rules-based signals instead.
+
+To enable the optional AI-generated narrative, add these server-side environment variables in Vercel:
+
+- `OPENAI_API_KEY` — OpenAI API key, available only to the server route.
+- `OPENAI_MODEL` — optional model name; defaults to `gpt-4o-mini` in this code.
+
+Do not prefix either variable with `NEXT_PUBLIC_`. Never commit a key to GitHub or include it in browser code. Refresh the deployment after setting the environment variables. AI recommendations are suggestions for authorised staff to review; they do not perform actions and must not be used for diagnosis, treatment, or clinical triage. Review privacy, vendor, contractual, and hospital governance requirements before enabling an external model in a real hospital environment.
