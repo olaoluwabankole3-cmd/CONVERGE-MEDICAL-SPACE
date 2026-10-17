@@ -21,7 +21,6 @@ type PatientRequest = {
   hospital: { id: string; name: string; city: string | null; country: string } | null;
   appointment: Appointment | null; messages: Message[];
 };
-type Profile = { user_id: string; display_name: string; phone_number: string | null; phone_verified_at: string | null };
 
 const statusLabel: Record<string, string> = {
   submitted: "Received", under_review: "Under review", awaiting_patient: "Your response needed",
@@ -48,7 +47,6 @@ function localIso(value: string) {
 export default function PatientRequestsPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [requests, setRequests] = useState<PatientRequest[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +63,6 @@ export default function PatientRequestsPage() {
   const [preferredEndAt, setPreferredEndAt] = useState("");
   const [replyById, setReplyById] = useState<Record<string, string>>({});
   const [workingId, setWorkingId] = useState("");
-  const [serviceFilter, setServiceFilter] = useState("");
 
   const load = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -82,8 +79,10 @@ export default function PatientRequestsPage() {
       const params = new URLSearchParams(window.location.search);
       const queryService = params.get("serviceId") ?? "";
       const queryHospital = params.get("hospitalId") ?? "";
-      setServiceFilter(current => current || queryHospital);
-      setServiceId(current => current || (queryService && available.some(item => item.id === queryService) ? queryService : available[0]?.id ?? ""));
+      const preferredService = queryService && available.some(item => item.id === queryService)
+        ? queryService
+        : available.find(item => item.hospital?.id === queryHospital)?.id ?? available[0]?.id ?? "";
+      setServiceId(current => current || preferredService);
       const requestResponse = await requestResponsePromise;
       const payload = await requestResponse.json();
       if (requestResponse.status === 401) {
@@ -93,7 +92,6 @@ export default function PatientRequestsPage() {
       }
       if (!requestResponse.ok) throw new Error(payload.error ?? "Unable to load your requests.");
       setNeedsLogin(false);
-      setProfile(payload.profile ?? null);
       setEmail(payload.email ?? "");
       setRequests(payload.requests ?? []);
       if (payload.profile) {
@@ -110,14 +108,11 @@ export default function PatientRequestsPage() {
   useEffect(() => { void load(); }, [load]);
 
   const selectedService = useMemo(() => services.find(service => service.id === serviceId) ?? null, [services, serviceId]);
-  const matchingServices = useMemo(() => serviceFilter
-    ? services.filter(service => service.hospital?.id === serviceFilter)
-    : services, [services, serviceFilter]);
+  const matchingServices = services;
 
   function chooseService(value: string) {
     setServiceId(value);
     const item = services.find(service => service.id === value);
-    if (item?.hospital?.id) setServiceFilter(item.hospital.id);
     if (item && !subject) setSubject(item.name);
   }
 
