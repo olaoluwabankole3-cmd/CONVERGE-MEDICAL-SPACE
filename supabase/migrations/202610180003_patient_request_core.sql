@@ -331,6 +331,45 @@ begin
     end if;
   end if;
 
+  -- Keep the canonical request lifecycle aligned with structured appointment
+  -- outcomes. Appointment rows are changed first; the request transition follows
+  -- in the same server-side transaction.
+  if new.request_type = 'appointment' then
+    if new.status = 'appointment_proposed'
+       and not exists (
+         select 1 from public.appointments a
+         where a.patient_request_id = new.id
+           and a.hospital_id = new.hospital_id
+           and a.status = 'proposed'
+       ) then
+      raise exception 'An appointment request cannot enter appointment_proposed without a proposed appointment';
+    elsif new.status = 'confirmed'
+       and not exists (
+         select 1 from public.appointments a
+         where a.patient_request_id = new.id
+           and a.hospital_id = new.hospital_id
+           and a.status = 'confirmed'
+       ) then
+      raise exception 'An appointment request cannot be confirmed before its appointment is confirmed';
+    elsif new.status = 'completed'
+       and not exists (
+         select 1 from public.appointments a
+         where a.patient_request_id = new.id
+           and a.hospital_id = new.hospital_id
+           and a.status = 'completed'
+       ) then
+      raise exception 'An appointment request cannot be completed before its appointment is completed';
+    elsif new.status in ('cancelled', 'declined')
+       and exists (
+         select 1 from public.appointments a
+         where a.patient_request_id = new.id
+           and a.hospital_id = new.hospital_id
+           and a.status <> 'cancelled'
+       ) then
+      raise exception 'Cancel or decline the associated appointment before closing its request';
+    end if;
+  end if;
+
   if new.status in ('completed', 'cancelled', 'declined') then
     new.closed_at := coalesce(new.closed_at, now());
   else
