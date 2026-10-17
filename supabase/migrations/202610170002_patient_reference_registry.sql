@@ -28,10 +28,24 @@ create trigger patient_records_set_updated_at
 before update on public.patient_records
 for each row execute function public.set_updated_at();
 
+create or replace function public.prevent_patient_record_scope_change()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+begin
+  if new.hospital_id is distinct from old.hospital_id
+     or new.created_by is distinct from old.created_by then
+    raise exception 'Patient reference identity and hospital scope cannot be changed';
+  end if;
+  return new;
+end;
+$;
+
 drop trigger if exists patient_records_prevent_scope_change on public.patient_records;
 create trigger patient_records_prevent_scope_change
 before update on public.patient_records
-for each row execute function public.prevent_hospital_scope_change();
+for each row execute function public.prevent_patient_record_scope_change();
 
 alter table public.patient_records enable row level security;
 
