@@ -51,7 +51,7 @@ Create `.env.local` with the two public environment variables. Do not commit it.
 
 ## Safety boundary
 
-This is an early development environment. The dashboard's existing demo records are not yet persistent. Do not enter real patient information until authentication, hospital approval administration, access auditing, backups, and clinical security review have been implemented and tested.
+This is an early development environment. Hospital work items and the minimal patient-reference directory are persisted in Supabase, but this does not make the application production-ready for clinical use. Use synthetic references only until authentication, hospital approval, tenant isolation, role permissions, audit logging, backups, incident response, and clinical security review have been verified.
 
 
 ## Platform approval configuration
