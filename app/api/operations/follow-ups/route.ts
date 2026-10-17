@@ -17,14 +17,6 @@ function parseDueAt(value: unknown): string | null | undefined {
   return date.toISOString();
 }
 
-function userLabel(user: { email?: string; user_metadata?: Record<string, unknown> } | null, userId: string) {
-  const metadata = user?.user_metadata ?? {};
-  const display = [metadata.full_name, metadata.name, metadata.display_name]
-    .find(value => typeof value === "string" && value.trim().length > 0);
-  if (typeof display === "string") return display.trim().slice(0, 120);
-  return user?.email || `Hospital staff · ${userId.slice(0, 8)}`;
-}
-
 export async function GET(request: NextRequest) {
   const context = await getAuthenticatedAdminContext();
   if ("response" in context) return context.response;
@@ -54,10 +46,14 @@ export async function GET(request: NextRequest) {
 
   const members = await Promise.all((memberships ?? []).map(async member => {
     const { data } = await context.admin.auth.admin.getUserById(member.user_id);
+    const metadata = (data.user?.user_metadata ?? {}) as Record<string, unknown>;
+    const fullName = typeof metadata.full_name === "string" ? metadata.full_name.trim() : "";
+    const displayNameValue = typeof metadata.name === "string" ? metadata.name.trim() : "";
+    const displayName = (fullName || displayNameValue || data.user?.email || `Hospital staff · ${member.user_id.slice(0, 8)}`).slice(0, 120);
     return {
       userId: member.user_id,
       role: member.role,
-      displayName: userLabel(data.user, member.user_id),
+      displayName,
     };
   }));
 
