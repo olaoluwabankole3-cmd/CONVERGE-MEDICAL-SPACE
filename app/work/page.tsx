@@ -9,7 +9,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 type WorkType = "access_case" | "appointment" | "follow_up" | "exception" | "task";
 type Priority = "low" | "medium" | "high" | "urgent";
 type WorkStatus = "draft" | "open" | "needs_review" | "in_progress" | "awaiting_response" | "resolved" | "closed";
-type Row = { id: string; reference_code: string; title: string; summary: string | null; item_type: WorkType; priority: Priority; status: WorkStatus; owner_id: string | null; external_reference: string | null; due_at: string | null; created_at: string; updated_at: string };
+type PatientReference = { id: string; reference_code: string; care_area: string | null; status: "active" | "archived" };
+type Row = { id: string; reference_code: string; title: string; summary: string | null; item_type: WorkType; priority: Priority; status: WorkStatus; owner_id: string | null; external_reference: string | null; due_at: string | null; patient_record_id: string | null; created_at: string; updated_at: string };
 const labels: Record<WorkType,string> = { access_case: "Access case", appointment: "Appointment", follow_up: "Follow-up", exception: "Exception", task: "Task" };
 const statusLabels: Record<string,string> = { draft: "Draft", open: "Open", needs_review: "Needs review", in_progress: "In progress", awaiting_response: "Awaiting response", resolved: "Resolved", closed: "Closed" };
 const titles: Record<string,string> = { access_case: "Access cases", appointment: "Appointments", follow_up: "Follow-ups & tasks", exception: "Exceptions", task: "Follow-ups & tasks" };
@@ -23,6 +24,8 @@ export default function WorkPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [type, setType] = useState<WorkType>("access_case");
   const [items, setItems] = useState<Row[]>([]);
+  const [patientReferences, setPatientReferences] = useState<PatientReference[]>([]);
+  const [newPatientRecordId, setNewPatientRecordId] = useState("");
   const [hospitalId, setHospitalId] = useState("");
   const [hospitalName, setHospitalName] = useState("");
   const [userId, setUserId] = useState("");
@@ -76,9 +79,14 @@ export default function WorkPage() {
         if (owned && owned.status !== "active") throw new Error("This hospital workspace must be approved before operational records are available.");
         throw new Error("No active hospital membership was found for this account.");
       }
-      const { data, error: itemsError } = await supabase.from("work_items").select("id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,created_at,updated_at").eq("hospital_id", selected.hospital_id).eq("item_type", type).order("updated_at", { ascending: false }).limit(200);
+      const [{ data, error: itemsError }, { data: refs, error: refsError }] = await Promise.all([
+        supabase.from("work_items").select("id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,patient_record_id,created_at,updated_at").eq("hospital_id", selected.hospital_id).eq("item_type", type).order("updated_at", { ascending: false }).limit(200),
+        supabase.from("patient_records").select("id,reference_code,care_area,status").eq("hospital_id", selected.hospital_id).eq("status", "active").order("reference_code", { ascending: true }).limit(500)
+      ]);
       if (itemsError) throw itemsError;
+      if (refsError) throw new Error("Unable to load patient references. Confirm the patient-reference migration has been applied.");
       setItems((data ?? []) as Row[]);
+      setPatientReferences((refs ?? []) as PatientReference[]);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load operational records."); }
     finally { setLoading(false); }
   }, [router, supabase, type]);
@@ -88,7 +96,8 @@ export default function WorkPage() {
   const visible = useMemo(() => items.filter(item => {
     const matchesStatus = status === "all" || item.status === status || (status === "open" && !["resolved","closed"].includes(item.status));
     const q = search.trim().toLowerCase();
-    return matchesStatus && (!q || [item.reference_code,item.title,item.external_reference ?? "",item.status].some(v => v.toLowerCase().includes(q)));
+    const linkedReference = patientReferences.find(reference => reference.id === item.patient_record_id)?.reference_code ?? "";
+    return matchesStatus && (!q || [item.reference_code,item.title,item.external_reference ?? "",item.status,linkedReference].some(v => v.toLowerCase().includes(q)));
   }), [items, search, status]);
 
   const canCreate = ["owner", "admin", "clinician", "operations"].includes(role);
@@ -107,15 +116,15 @@ export default function WorkPage() {
       const { data, error: insertError } = await supabase.from("work_items").insert({
         hospital_id: hospitalId, reference_code: reference, title, summary: newSummary.trim() || null,
         item_type: type, priority: newPriority, status: newStatus, external_reference: newExternalReference.trim() || null,
-        due_at: newDueAt ? new Date(newDueAt).toISOString() : null, created_by: userId
-      }).select("id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,created_at,updated_at").single();
+        patient_record_id: newPatientRecordId || null, due_at: newDueAt ? new Date(newDueAt).toISOString() : null, created_by: userId
+      }).select("id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,patient_record_id,created_at,updated_at").single();
       if (insertError) throw insertError;
       const { error: auditError } = await supabase.from("audit_events").insert({
         hospital_id: hospitalId, actor_id: userId, entity_type: "work_item", entity_id: data.id,
         action: "work_item_created", details: { reference_code: reference, item_type: type, priority: newPriority, status: newStatus }
       });
       setItems(current => [data as Row, ...current]);
-      setShowCreate(false); setNewReference(""); setNewTitle(""); setNewSummary(""); setNewExternalReference(""); setNewPriority("medium"); setNewStatus("open"); setNewDueAt("");
+      setShowCreate(false); setNewReference(""); setNewTitle(""); setNewSummary(""); setNewExternalReference(""); setNewPatientRecordId(""); setNewPriority("medium"); setNewStatus("open"); setNewDueAt("");
       setNotice(auditError ? "Record created. The audit event could not be recorded, so please notify your administrator." : "Operational record created.");
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to create this record. Check that the reference is unique within your hospital."); }
     finally { setSaving(false); }
@@ -159,7 +168,7 @@ export default function WorkPage() {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid #e5ebef"}}><strong style={{fontSize:13}}>Records</strong><span style={{fontSize:11,color:"#72818d"}}>{visible.length} shown</span></div>
         {loading ? <p style={{padding:24,color:"#72818d",fontSize:12}}>Loading authorised records…</p> : visible.length === 0 ? <div style={{padding:36,textAlign:"center"}}><CheckCircle2 size={24} color="#7a9e98"/><p style={{fontSize:13,fontWeight:700}}>No matching records</p><p style={{fontSize:12,color:"#72818d"}}>Create a record for this queue or try another status filter. Records remain scoped to your authorised hospital.</p></div> :
           <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800,textAlign:"left"}}><thead><tr>{["REFERENCE / TITLE","STATUS","PRIORITY","DUE DATE","UPDATED","UPDATE STATUS"].map(label=><th key={label} style={{padding:"12px 16px",fontSize:9,letterSpacing:".7px",color:"#829099",background:"#fafcfc",borderBottom:"1px solid #e5ebef"}}>{label}</th>)}</tr></thead><tbody>{visible.map(item=><tr key={item.id}>
-            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3"}}><strong style={{display:"block",fontSize:12,marginBottom:5}}>{item.reference_code}</strong><span style={{fontSize:12,color:"#526570"}}>{item.title}</span>{item.summary && <p style={{fontSize:10,color:"#829099",margin:"6px 0 0",maxWidth:400}}>{item.summary}</p>}</td>
+            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3"}}><strong style={{display:"block",fontSize:12,marginBottom:5}}>{item.reference_code}</strong><span style={{fontSize:12,color:"#526570"}}>{item.title}</span>{patientReferences.find(reference => reference.id === item.patient_record_id) && <p style={{fontSize:10,color:"#167c78",margin:"6px 0 0"}}>Patient ref: {patientReferences.find(reference => reference.id === item.patient_record_id)?.reference_code}</p>}{item.summary && <p style={{fontSize:10,color:"#829099",margin:"6px 0 0",maxWidth:400}}>{item.summary}</p>}</td>
             <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11}}>{statusLabels[item.status] ?? item.status}</td>
             <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11,textTransform:"capitalize"}}>{item.priority}</td>
             <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11,color:"#72818d"}}>{item.due_at ? new Date(item.due_at).toLocaleDateString("en-GB") : "—"}</td>
@@ -175,6 +184,7 @@ export default function WorkPage() {
         <form onSubmit={createItem} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
           <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Internal reference *<input required maxLength={80} value={newReference} onChange={e=>setNewReference(e.target.value)} placeholder="e.g. ACC-2026-001" style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
           <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Title *<input required minLength={3} maxLength={240} value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Brief operational description" style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
+          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570",gridColumn:"1 / -1"}}>Linked patient reference (optional)<select value={newPatientRecordId} onChange={e=>setNewPatientRecordId(e.target.value)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,background:"#fff"}}><option value="">No patient reference linked</option>{patientReferences.map(reference=><option key={reference.id} value={reference.id}>{reference.reference_code}{reference.care_area ? " · "+reference.care_area : ""}</option>)}</select><span style={{fontSize:10,color:"#829099"}}>Only active references from this hospital are available.</span></label>
           <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Priority<select value={newPriority} onChange={e=>setNewPriority(e.target.value as Priority)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,background:"#fff"}}>{validPriorities.map(value=><option key={value} value={value}>{value[0].toUpperCase()+value.slice(1)}</option>)}</select></label>
           <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Initial status<select value={newStatus} onChange={e=>setNewStatus(e.target.value as WorkStatus)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,background:"#fff"}}>{validStatuses.map(value=><option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
           <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>External reference (optional)<input maxLength={120} value={newExternalReference} onChange={e=>setNewExternalReference(e.target.value)} placeholder="Non-sensitive external ID" style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
