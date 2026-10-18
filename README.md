@@ -19,6 +19,8 @@ A multi-hospital operations workspace built with Next.js, TypeScript, and Supaba
 - Persistent work-item creation with type, priority, external reference, due date, status transitions, and audit events.
 - GitHub Actions validation workflow for ESLint and a production build.
 - Governed operations analyst that reviews aggregate hospital workflow metrics; authorised staff can review and explicitly create a follow-up task, with task creation and audit logging committed atomically.
+- Personal `/my-work` queue for assigned items, due-soon/overdue signals, and audited status updates.
+- Hospital-scoped `/notifications` inbox for task assignments and status updates, with mark-read controls.
 
 ## Configure Supabase and Vercel
 
@@ -44,6 +46,7 @@ Run these migrations in order in the intended Supabase project's SQL Editor. Ver
 7. `supabase/migrations/202610180004_patient_request_transactional_workflows.sql` — adds request messages and service-role-only PostgreSQL functions for atomic patient submission, patient responses, staff review, appointment proposal/confirmation, cancellation and completion, linked work items, and audit events.
 8. `supabase/migrations/202610180005_human_approved_operations_followups.sql` — adds a role-checked, service-role-only transaction that creates a staff-approved operational follow-up task and its audit event together.
 9. `supabase/migrations/202610180006_assign_human_approved_followups.sql` — adds optional same-hospital staff assignment for analyst-created follow-up tasks, with membership validation and assignment audit events in the same transaction.
+10. `supabase/migrations/202610180007_notifications_and_assigned_work.sql` — adds private in-app notifications for task assignment/status changes and a transactional status update for work assigned to the signed-in user.
 
 Apply these migrations in order on a fresh database. For an existing database, first verify which migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. Migration 7 is required by the patient/hospital request APIs and migration 8 is required to create follow-up tasks from the operations analyst, and migration 9 adds optional staff assignment. Apply applicable migrations once, in order. Run each applicable migration once in the intended Supabase project before using its workflow. The public service directory and new pages are committed to GitHub, but deployment, database RPC behaviour, authentication flows, and tenant isolation still require live verification. Use synthetic data only until that verification and the hospital's security review are complete.
 
@@ -88,3 +91,5 @@ To enable the optional AI-generated narrative, add these server-side environment
 - `OPENAI_MODEL` — optional model name; defaults to `gpt-4o-mini` in this code.
 
 Do not prefix either variable with `NEXT_PUBLIC_`. Never commit a key to GitHub or include it in browser code. Refresh the deployment after setting the environment variables. AI recommendations are suggestions for authorised staff to review; they do not perform actions and must not be used for diagnosis, treatment, or clinical triage. Review privacy, vendor, contractual, and hospital governance requirements before enabling an external model in a real hospital environment.
+
+In-app notifications and the `/my-work` queue require migration 10. Assignment notifications are created in the same database transaction as assignment changes. Each user can read or mark read only their own notifications within the selected active hospital. `/my-work` shows the authenticated user's assigned work; status updates are accepted only for tasks assigned to that account and generate an audit event. Notification delivery is currently in-app only—email, SMS, push, and scheduled reminder delivery are not implemented.
