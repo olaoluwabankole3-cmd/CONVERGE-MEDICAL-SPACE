@@ -200,3 +200,26 @@ tbody tr:hover, tbody tr.selected-row { background: rgba(164, 237, 193, .06); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Remaining shared components and their interaction states */
+input, textarea, select, button { font-family: var(--font-ui) !important; }
+.filter span { background: rgba(164,237,193,.08); color: #aebfb1; }
+.attention-count { background: rgba(241,198,168,.12); color: #f1c6a8; }
+.activity-icon { background: rgba(164,237,193,.09); color: #a4edc1; }
+.care-search { background: #101917; color: #a4b0a7; }
+.care-search input { background: #0d1511; border-color: var(--converge-border); color: #f3f5f3; }
+.care-panel-index { background: rgba(164,237,193,.1); color: #a4edc1; }
+.care-form-empty { background: rgba(242,211,143,.07); color: #f2d38f; border-color: rgba(242,211,143,.18); }
+.care-icon-button { background: #101917; color: #a4b0a7; border-color: var(--converge-border); }
+.care-icon-button:hover:not(:disabled) { background: rgba(164,237,193,.08); color: #a4edc1; }
+.care-footer { background: #0d1511; color: #929c97; border-top: 1px solid var(--converge-border); }
+.staff-request-metrics>div { background: var(--converge-panel); border-color: var(--converge-border); }
+.staff-action-form { background: #101917; border-color: var(--converge-border); }
+.staff-thread-message { background: #15211a; border-color: var(--converge-border); }
+.staff-patient-avatar, .hospital-service-row-mark { background: rgba(164,237,193,.1); color: #a4edc1; }
+.hospital-service-tags span { background: rgba(164,237,193,.08); color: #b5d8bf; }
+.hospital-service-tags .service-status-active, .hospital-service-tags .service-status-published { background: rgba(164,237,193,.1); color: #bfeecb; }
+.hospital-service-tags .service-status-inactive, .hospital-service-tags .service-status-draft { background: rgba(242,211,143,.1); color: #f2d38f; }
+.patient-auth-password { background: #101917; border-color: var(--converge-border); }
+.care-loading { color: #a4b0a7; }
+.care-spinner { border-color: rgba(164,237,193,.16); border-top-color: #a4edc1; }
