@@ -93,3 +93,16 @@ To enable the optional AI-generated narrative, add these server-side environment
 Do not prefix either variable with `NEXT_PUBLIC_`. Never commit a key to GitHub or include it in browser code. Refresh the deployment after setting the environment variables. AI recommendations are suggestions for authorised staff to review; they do not perform actions and must not be used for diagnosis, treatment, or clinical triage. Review privacy, vendor, contractual, and hospital governance requirements before enabling an external model in a real hospital environment.
 
 In-app notifications and the `/my-work` queue require migration 10. Assignment notifications are created in the same database transaction as assignment changes. Each user can read or mark read only their own notifications within the selected active hospital. `/my-work` shows the authenticated user's assigned work; status updates are accepted only for tasks assigned to that account and generate an audit event. Notification delivery is currently in-app only—email, SMS, push, and scheduled reminder delivery are not implemented.
+
+
+## Converge brand system
+
+Medical Intelligence is a sector workspace within the wider Converge platform. Its interface follows the shared Converge design language rather than introducing a separate visual brand:
+
+- **Foundation:** deep green-black canvas (#0b1110) with layered dark surfaces (#101917, #15211a).
+- **Accent:** soft mint (#a4edc1, #8de4bb) for primary actions, active navigation, focus indicators, and brand marks.
+- **Typography:** Inter-first system sans-serif stack, with the same compact, carefully tracked headings used by Converge.
+- **Interface treatment:** subtle green-tinted borders, quiet surfaces, restrained glow/shadows, and readable status tones. Operational state still uses distinct warning/error colours where they convey meaning.
+- **Responsive behaviour:** the existing clinical workspace, patient-access, sign-in, My Work, and Notifications layouts remain intact; this change is a visual-system alignment, not a workflow redesign.
+
+Shared tokens and component overrides live in app/converge-brand.css; standalone My Work and Notifications pages also use the matching palette in their CSS modules.
