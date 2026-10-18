@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, ListChecks, Plus, RefreshCw, Search, ShieldCheck, Users, X, Save } from "lucide-react";
+import { Activity, AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, ListChecks, Plus, RefreshCw, Search, ShieldCheck, Users, X, Save } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type WorkType = "access_case" | "appointment" | "follow_up" | "exception" | "task";
