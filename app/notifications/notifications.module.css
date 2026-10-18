@@ -127,3 +127,58 @@
 .emptyIcon { background: rgba(164,237,193,.09); color: #a4edc1; }
 .spinner { border-color: rgba(164,237,193,.15); border-top-color: #a4edc1; }
 @media (prefers-reduced-motion: reduce) { .notification { transition: none; } }
+
+
+/* Layout refinement: match the Converge operational workspace */
+.header { height: 68px; padding-inline: clamp(16px, 4vw, 50px); backdrop-filter: blur(16px); }
+.brandMark { border-radius: 11px; }
+.brand strong { font-size: 20px; }
+.headerActions { gap: 15px; }
+.headerLink { font-size: 10px; }
+.backLink { border-radius: 10px; padding: 9px 12px; }
+.hero { max-width: 1380px; padding-top: clamp(28px,3.3vw,42px); padding-bottom: 24px; }
+.eyebrow { letter-spacing: .15em; }
+.hero h1 { font-size: clamp(30px,3vw,40px); line-height: 1.08; letter-spacing: -.06em; font-weight: 760; }
+.hero p { font-size: 12px; line-height: 1.8; }
+.panel { max-width: 1260px; margin-bottom: 28px; }
+.panelHeading { padding: 22px 23px; }
+.panelHeading h2 { font-size: 20px; font-weight: 740; letter-spacing: -.045em; }
+.panelHeading p { font-size: 11px; line-height: 1.7; max-width: 520px; }
+.markAllButton { min-height: 36px; border-radius: 9px; padding: 9px 12px; }
+.filters { padding: 11px 17px; gap: 5px; flex-wrap: wrap; }
+.filters button { border-radius: 8px; padding: 8px 11px; }
+.list { overflow: hidden; border-radius: 0 0 14px 14px; }
+.notification { padding: 19px 22px; gap: 14px; transition: background .18s ease; }
+.notification:hover { background: rgba(164,237,193,.035); }
+.notificationIcon { width: 40px; height: 40px; border-radius: 12px; }
+.notificationTop strong { font-size: 12px; line-height: 1.55; }
+.notificationBody > p { font-size: 11px; line-height: 1.75; max-width: 850px; }
+.meta { font-size: 9px; gap: 12px; }
+.actions { gap: 8px; }
+.actions a, .actions button { min-height: 31px; padding: 7px 10px; border-radius: 8px; font-size: 9px; }
+.panelFooter { padding: 14px 20px; font-size: 10px; line-height: 1.6; }
+.pageFooter { max-width: 1260px; font-size: 9px; line-height: 1.65; }
+.notice, .error { border-radius: 11px; font-size: 11px; }
+.empty { min-height: 235px; padding: 42px 20px; }
+.empty h3 { font-size: 15px; }
+.empty p { max-width: 480px; font-size: 11px; line-height: 1.75; }
+.empty > a { display: inline-flex; margin-top: 15px; border-radius: 9px; padding: 9px 12px; font-size: 10px; }
+@media (max-width: 720px) {
+  .hero, .panel, .pageFooter { padding-inline: 18px; }
+  .panelHeading { padding: 16px; }
+  .notification { padding: 16px; }
+}
+@media (max-width: 480px) {
+  .header { padding-inline: 14px; }
+  .headerActions { gap: 7px; }
+  .hero, .panel, .pageFooter { padding-inline: 14px; }
+  .hero h1 { font-size: 30px; }
+  .hero p { font-size: 11px; }
+  .panelHeading { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .markAllButton { align-self: flex-start; }
+  .notification { gap: 10px; padding: 14px 12px; }
+  .notificationIcon { width: 35px; height: 35px; }
+  .notificationTop strong { font-size: 11px; }
+  .notificationBody > p { font-size: 10px; }
+  .actions { flex-wrap: wrap; }
+}
