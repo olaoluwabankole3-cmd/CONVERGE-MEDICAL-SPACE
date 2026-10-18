@@ -98,3 +98,56 @@
   .queueFooter { align-items: flex-start; flex-direction: column; }
   .pageFooter { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Converge shared visual system */
+.page { background: var(--converge-bg); color: var(--converge-text); font-family: var(--font-ui); }
+.header { background: rgba(16,25,23,.96); border-bottom-color: var(--converge-border); }
+.brand { color: #f3f5f3; }
+.brandMark { background: var(--converge-accent); color: #102219; box-shadow: 0 8px 24px rgba(119,222,158,.12); }
+.brand strong { color: #f3f5f3; letter-spacing: -.055em; }
+.brand small, .headerLink, .eyebrow, .hero p, .hospitalLine { color: var(--converge-muted); }
+.headerLink:hover, .queueFooter a { color: var(--converge-accent); }
+.backLink { background: var(--converge-panel); border-color: var(--converge-border); color: #c1d0c4; }
+.backLink:hover { background: var(--converge-panel-hover); color: #f3f5f3; }
+.hero h1, .queueHeading h2, .workCard h3, .empty h3 { color: #f3f5f3; letter-spacing: -.045em; }
+.hospitalLine strong { color: #c1f7d3; }
+.hospitalLine > span { background: var(--converge-accent); }
+.refreshButton { background: var(--converge-accent); color: #102219; box-shadow: 0 8px 22px rgba(119,222,158,.1); }
+.refreshButton:hover:not(:disabled) { background: #c1f7d3; }
+.metrics article, .workCard { background: var(--converge-panel); border-color: var(--converge-border); box-shadow: 0 12px 34px rgba(0,0,0,.12); }
+.metrics article > span, .metrics small, .type, .summary, .details, .dueLine, .updateHint, .queueFooter, .pageFooter { color: var(--converge-muted); }
+.metrics strong { color: #f3f5f3; }
+.metrics .alertMetric strong, .dueOverdue { color: #f1c6a8; }
+.search { color: #a4b0a7; }
+.search input { background: #0d1511; border-color: var(--converge-border); color: #f3f5f3; font-family: var(--font-ui); }
+.search input::placeholder { color: #718076; }
+.search input:focus { border-color: rgba(164,237,193,.55); box-shadow: 0 0 0 3px rgba(164,237,193,.08); }
+.filters button { color: #9ba89e; }
+.filters .activeFilter { border-color: rgba(164,237,193,.22); background: rgba(164,237,193,.08); color: #c1f7d3; }
+.filters b { background: rgba(241,198,168,.12); color: #f1c6a8; }
+.workCard { transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.workCard:hover { border-color: rgba(164,237,193,.26); background: #121e17; }
+.refLine > span:first-child { color: #a4edc1; }
+.priority { background: rgba(164,237,193,.08); color: #b5d8bf; }
+.priority_high, .priority_urgent { background: rgba(241,198,168,.12); color: #f1c6a8; }
+.priority_medium { background: rgba(242,211,143,.11); color: #f2d38f; }
+.priority_low { background: rgba(164,237,193,.08); color: #bfeecb; }
+.status { background: rgba(164,237,193,.09); color: #bfeecb; border-color: var(--converge-border); }
+.cardActions label { color: #a4b0a7; }
+.cardActions select { background: #0d1511; border-color: var(--converge-border); color: #f3f5f3; font-family: var(--font-ui); }
+.cardActions select:focus { border-color: rgba(164,237,193,.55); box-shadow: 0 0 0 3px rgba(164,237,193,.08); }
+.cardActions select:disabled { opacity: .55; }
+.completed { border-color: rgba(164,237,193,.18); background: rgba(164,237,193,.035); }
+.queueFooter, .pageFooter { border-color: var(--converge-border); }
+.queueFooter a { color: #a4edc1; }
+.pageFooter > span:first-child { color: #929c97; }
+.error { background: rgba(241,198,168,.09); border-color: rgba(241,198,168,.22); color: #f1c6a8; }
+.notice { background: rgba(164,237,193,.07); border-color: rgba(164,237,193,.18); color: #c1f7d3; }
+.error span, .notice span { color: inherit; }
+.error button, .notice button { color: inherit; }
+.empty { background: var(--converge-panel); border-color: var(--converge-border); color: var(--converge-muted); }
+.empty p { color: var(--converge-muted); }
+.emptyIcon { background: rgba(164,237,193,.09); color: #a4edc1; }
+.spinner { border-color: rgba(164,237,193,.15); border-top-color: #a4edc1; }
+@media (prefers-reduced-motion: reduce) { .workCard { transition: none; } }
