@@ -8,7 +8,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AppointmentRow = {
   id: string; hospital_id: string; patient_request_id: string; status: string;
-  start_at: string; end_at: string; location: string | null; patient_instructions: string | null;
+  start_at: string; end_at: string; location: string | null;
   proposed_by: string; confirmed_by: string | null; confirmed_at: string | null;
   created_at: string; updated_at: string;
 };
@@ -95,7 +95,7 @@ export default function AppointmentsPage() {
 
       const { data: appointmentRows, error: appointmentsError } = await supabase
         .from("appointments")
-        .select("id,hospital_id,patient_request_id,status,start_at,end_at,location,patient_instructions,proposed_by,confirmed_by,confirmed_at,created_at,updated_at")
+        .select("id,hospital_id,patient_request_id,status,start_at,end_at,location,proposed_by,confirmed_by,confirmed_at,created_at,updated_at")
         .eq("hospital_id", hospitalId)
         .order("start_at", { ascending: true })
         .limit(500);
@@ -236,7 +236,6 @@ export default function AppointmentsPage() {
                     </div>
                     {item.reference && <span className="appointment-reference">Patient reference · {item.reference.reference_code}{item.reference.care_area ? ` · ${item.reference.care_area}` : ""}</span>}
                     {!item.reference && item.request?.request_type && <span className="appointment-reference">{item.request.request_type.replaceAll("_", " ")}</span>}
-                    {item.patient_instructions && <p className="appointment-description">{item.patient_instructions}</p>}
                   </div>
                   <div className="appointment-card-side">
                     <span className={`appointment-status ${statusClass(item.status)}`}>{STATUS_LABELS[item.status] ?? item.status.replaceAll("_", " ")}</span>
