@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, ListChecks, Plus, RefreshCw, Search, ShieldCheck, Users, X, Save } from "lucide-react";
+import { Activity, AlertCircle, ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, ListChecks, Plus, RefreshCw, Search, ShieldCheck, Users, X, Save } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type WorkType = "access_case" | "appointment" | "follow_up" | "exception" | "task";
@@ -98,10 +98,9 @@ export default function WorkPage() {
     const q = search.trim().toLowerCase();
     const linkedReference = patientReferences.find(reference => reference.id === item.patient_record_id)?.reference_code ?? "";
     return matchesStatus && (!q || [item.reference_code,item.title,item.external_reference ?? "",item.status,linkedReference].some(v => v.toLowerCase().includes(q)));
-  }), [items, search, status]);
+  }), [items, patientReferences, search, status]);
 
   const canCreate = ["owner", "admin", "clinician", "operations"].includes(role);
-  const icon = type === "appointment" ? <CalendarDays size={20}/> : type === "exception" ? <ShieldCheck size={20}/> : <Users size={20}/>;
 
   async function createItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
