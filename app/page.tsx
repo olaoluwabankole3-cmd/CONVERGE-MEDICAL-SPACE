@@ -298,8 +298,9 @@ export default function Home() {
           <a className="nav-item" href="/patients"><Users size={18} /><span>Patient references</span></a>
           <a className="nav-item" href="/requests"><ClipboardList size={18} /><span>Patient requests</span></a>
           <a className="nav-item" href="/services"><Stethoscope size={18} /><span>Hospital services</span></a>
-          <a className="nav-item" href="/work?type=appointment"><CalendarDays size={18} /><span>Appointments</span></a>
-          <a className="nav-item" href="/work?type=follow_up"><CheckCircle2 size={18} /><span>Follow-ups & tasks</span></a>
+          <a className="nav-item" href="/appointments"><CalendarDays size={18} /><span>Appointments</span></a>
+          <a className="nav-item" href="/work?type=follow_up"><CheckCircle2 size={18} /><span>Follow-ups</span></a>
+          <a className="nav-item" href="/work?type=task"><ClipboardList size={18} /><span>Tasks</span></a>
           <a className="nav-item" href="/my-work"><ClipboardCheck size={18} /><span>My assigned work</span></a>
           <a className="nav-item" href="/notifications"><Bell size={18} /><span>Notifications</span></a>
           <a className="nav-item" href="/work?type=exception"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
