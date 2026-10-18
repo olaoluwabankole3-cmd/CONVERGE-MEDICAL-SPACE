@@ -700,3 +700,16 @@ tbody tr:hover td, tbody tr.selected-row td { background: rgba(164,237,193,.045)
   .ops-queue-metrics article>strong, .appointment-metrics strong, .audit-metrics strong { font-size:24px; }
   .appointment-card-side { padding-left:0; }
 }
+
+
+.audit-date-line { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:-5px 0 22px; color:#829087; font-size:10px; }
+.audit-date-line svg { color:#a4edc1; }
+.audit-event-list { display:grid; }
+.audit-detail-grid { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+.audit-detail-grid>span { display:inline-grid; gap:3px; max-width:100%; padding:7px 9px; border:1px solid rgba(201,235,207,.1); border-radius:8px; background:#0d1511; }
+.audit-detail-grid small { color:#718076; font-size:8px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+.audit-detail-grid strong { color:#cbd9ce; font-size:9px; font-weight:650; overflow-wrap:anywhere; }
+@media (max-width:700px) {
+  .audit-date-line { margin-top:0; margin-bottom:18px; }
+  .audit-detail-grid>span { flex:1 1 42%; }
+}
