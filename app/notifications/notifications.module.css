@@ -1,0 +1,84 @@
+.page { min-height: 100vh; background: #f5f8f7; color: #1c3a47; font-family: Arial, Helvetica, sans-serif; }
+.header { height: 70px; padding: 0 clamp(16px, 4vw, 50px); display: flex; align-items: center; justify-content: space-between; gap: 18px; background: #fff; border-bottom: 1px solid #e1eae7; }
+.brand { display: flex; align-items: center; gap: 10px; color: #193744; text-decoration: none; flex-shrink: 0; }
+.brandMark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: #167e78; color: #fff; }
+.brand strong { display: block; font-size: 20px; letter-spacing: -.6px; }
+.brand small { display: block; margin-top: 4px; color: #839a9c; font-size: 8px; letter-spacing: 1.2px; }
+.headerActions { display: flex; align-items: center; gap: 17px; }
+.headerLink { display: inline-flex; align-items: center; gap: 6px; color: #55767a; font-size: 10px; font-weight: 800; }
+.backLink { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #dce7e3; padding: 9px 11px; border-radius: 8px; color: #47736f; font-size: 10px; font-weight: 700; }
+.hero { max-width: 1250px; margin: 0 auto; padding: 37px clamp(16px, 4vw, 50px) 25px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.eyebrow { display: inline-block; color: #72928e; font-size: 9px; font-weight: 800; letter-spacing: 1.3px; }
+.hero h1 { margin: 12px 0 8px; font-size: clamp(28px, 3vw, 37px); line-height: 1.12; letter-spacing: -1.25px; font-weight: 650; }
+.hero p { max-width: 650px; margin: 0; color: #7b9092; font-size: 12px; line-height: 1.7; }
+.hospitalLine { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 15px; color: #849799; font-size: 10px; }
+.hospitalLine > span { width: 6px; height: 6px; border-radius: 50%; background: #329b7f; }
+.hospitalLine strong { color: #426a70; }
+.heroActions { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.unreadBadge { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #d9e8e3; border-radius: 7px; padding: 10px; background: #edf7f2; color: #387b6b; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.refreshButton { display: inline-flex; align-items: center; gap: 7px; padding: 11px 13px; border: 0; border-radius: 8px; background: #147d77; color: white; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.refreshButton:disabled { opacity: .6; cursor: wait; }
+.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.panel { max-width: 1150px; margin: 0 auto 22px; padding: 0 clamp(16px, 4vw, 40px); }
+.panelHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; padding: 20px; background: white; border: 1px solid #e0e9e5; border-radius: 11px 11px 0 0; }
+.panelHeading h2 { margin: 7px 0 5px; font-size: 19px; letter-spacing: -.45px; }
+.panelHeading p { margin: 0; color: #849698; font-size: 10px; line-height: 1.6; }
+.markAllButton { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #dce8e2; border-radius: 7px; padding: 9px 11px; background: white; color: #397f73; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.markAllButton:disabled { opacity: .45; cursor: not-allowed; }
+.filters { display: flex; align-items: center; gap: 6px; padding: 10px 18px; background: #fbfdfc; border-left: 1px solid #e0e9e5; border-right: 1px solid #e0e9e5; border-bottom: 1px solid #e0e9e5; }
+.filters button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #788e90; font-size: 9px; font-weight: 800; }
+.filters button span { min-width: 16px; padding: 2px 4px; border-radius: 4px; background: #edf2f0; color: #6e8586; font-size: 8px; }
+.filters .activeFilter { background: white; border-color: #d9e7e1; color: #277d73; }
+.filters .activeFilter span { background: #e8f5ef; color: #3a8575; }
+.list { border: 1px solid #e0e9e5; border-top: 0; background: white; }
+.notification { display: flex; align-items: flex-start; gap: 13px; padding: 18px 20px; border-bottom: 1px solid #edf2f0; }
+.notification:last-child { border-bottom: 0; }
+.notification.unread { background: #f8fcfa; }
+.notificationIcon { width: 36px; height: 36px; display: grid; place-items: center; flex-shrink: 0; border-radius: 10px; background: #ecf5f1; color: #4e8e81; }
+.notificationBody { flex: 1; min-width: 0; }
+.notificationTop { display: flex; align-items: center; gap: 8px; }
+.notificationTop strong { color: #335560; font-size: 12px; line-height: 1.45; }
+.unreadDot { width: 6px; height: 6px; background: #1b9181; border-radius: 50%; flex-shrink: 0; }
+.notificationBody > p { margin: 6px 0 9px; color: #788e91; font-size: 10px; line-height: 1.65; overflow-wrap: anywhere; }
+.meta { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: #97a6a6; font-size: 8px; }
+.meta > span { display: inline-flex; align-items: center; gap: 4px; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 13px; margin-top: 12px; }
+.actions a, .actions button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; padding: 0; color: #277e74; font-size: 9px; font-weight: 800; text-decoration: none; }
+.actions button { color: #809495; }
+.actions button:disabled { opacity: .5; }
+.panelFooter { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 20px; border: 1px solid #e0e9e5; border-top: 0; border-radius: 0 0 11px 11px; background: #fbfdfc; color: #94a4a3; font-size: 9px; }
+.panelFooter a { display: inline-flex; align-items: center; gap: 6px; color: #347e75; font-weight: 800; }
+.pageFooter { max-width: 1070px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 50px) 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: #98a7a7; font-size: 9px; }
+.pageFooter > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.error, .notice { max-width: 1070px; margin: 0 auto 14px; padding: 12px 14px; display: flex; align-items: center; gap: 9px; border-radius: 8px; font-size: 10px; line-height: 1.6; }
+.error { background: #fff3f2; color: #a34e4a; border: 1px solid #f0d5d1; }
+.notice { background: #edf8f2; color: #427e6b; border: 1px solid #d8ebe2; }
+.error span, .notice span { flex: 1; }
+.error button, .notice button { border: 1px solid currentColor; background: transparent; border-radius: 6px; padding: 6px 8px; color: inherit; font-size: 9px; font-weight: 800; }
+.empty { display: grid; place-items: center; padding: 42px 20px; background: white; border: 1px solid #e0e9e5; border-top: 0; text-align: center; }
+.empty p { margin: 8px 0 0; color: #8a9a9c; font-size: 10px; line-height: 1.7; }
+.empty h3 { margin: 13px 0 0; color: #375960; font-size: 13px; }
+.empty > a { display: inline-flex; align-items: center; gap: 5px; margin-top: 13px; color: #347f75; font-size: 10px; font-weight: 800; }
+.emptyIcon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; color: #508e84; background: #ebf6f1; }
+.spinner { width: 22px; height: 22px; border: 2px solid #e1ede8; border-top-color: #27897d; border-radius: 50%; animation: spin 1s linear infinite; }
+@media (max-width: 720px) {
+  .header { height: 62px; padding: 0 13px; }
+  .brand strong { font-size: 18px; }
+  .headerActions { gap: 9px; }
+  .headerLink { font-size: 9px; }
+  .headerLink svg { display: none; }
+  .backLink { padding: 8px; font-size: 9px; }
+  .hero { display: block; padding-top: 27px; }
+  .hero h1 { font-size: 30px; }
+  .hero p { font-size: 11px; }
+  .heroActions { align-items: center; justify-content: flex-start; margin-top: 16px; }
+  .panelHeading { align-items: flex-start; padding: 15px; }
+  .panelHeading h2 { font-size: 17px; }
+  .panelHeading p { max-width: 270px; }
+  .notification { gap: 10px; padding: 15px 13px; }
+  .notificationIcon { width: 32px; height: 32px; }
+  .notificationTop strong { font-size: 11px; }
+  .panelFooter { padding: 12px 13px; align-items: flex-start; flex-direction: column; }
+  .pageFooter { align-items: flex-start; flex-direction: column; }
+}
