@@ -188,6 +188,8 @@ export default function AIAgentsPage() {
           <span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span>
         </Link>
         <nav className={styles.headerActions}>
+          <Link href="/my-work" className={styles.textLink}>My work</Link>
+          <Link href="/notifications" className={styles.textLink}>Notifications</Link>
           <Link href="/requests" className={styles.textLink}>Patient requests</Link>
           <Link href="/" className={styles.backLink}><ArrowLeft size={14} /> Hospital workspace</Link>
         </nav>
