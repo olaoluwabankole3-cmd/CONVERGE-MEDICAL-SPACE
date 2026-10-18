@@ -100,8 +100,15 @@ end;
 $$;
 
 drop trigger if exists work_items_notify_assignee on public.work_items;
-create trigger work_items_notify_assignee
-after insert or update of owner_id on public.work_items
+drop trigger if exists work_items_notify_assignee_insert on public.work_items;
+drop trigger if exists work_items_notify_assignee_update on public.work_items;
+
+create trigger work_items_notify_assignee_insert
+after insert on public.work_items
+for each row execute function public.notify_work_item_assignee();
+
+create trigger work_items_notify_assignee_update
+after update of owner_id on public.work_items
 for each row execute function public.notify_work_item_assignee();
 
 create or replace function public.update_my_assigned_work_item_status(
