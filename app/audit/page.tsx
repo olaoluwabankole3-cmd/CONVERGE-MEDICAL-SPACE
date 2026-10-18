@@ -3,10 +3,43 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileClock, RefreshCw, ShieldCheck } from "lucide-react";
+import { Activity, ArrowRight, CheckCircle2, Clock3, Download, FileClock, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type EventRow = { id: number; entity_type: string; entity_id: string; action: string; details: Record<string, unknown> | null; created_at: string };
+type EventCategory = "all" | "work" | "requests" | "appointments" | "governance";
+
+const CATEGORY_FILTERS: { value: EventCategory; label: string }[] = [
+  { value: "all", label: "All events" },
+  { value: "work", label: "Work items" },
+  { value: "requests", label: "Patient requests" },
+  { value: "appointments", label: "Appointments" },
+  { value: "governance", label: "Governance" },
+];
+const SAFE_DETAIL_KEYS = ["reference_code", "request_code", "item_type", "priority", "status", "previous_status", "new_status", "role", "appointment_status", "due_at"];
+
+function titleCase(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, letter => letter.toUpperCase());
+}
+function formatTimestamp(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+function categoryFor(event: EventRow): Exclude<EventCategory, "all"> {
+  const entity = event.entity_type.toLowerCase();
+  if (entity.includes("work") || entity.includes("follow_up") || entity.includes("task")) return "work";
+  if (entity.includes("request")) return "requests";
+  if (entity.includes("appointment")) return "appointments";
+  return "governance";
+}
+function safeDetails(details: EventRow["details"]) {
+  if (!details) return [];
+  return SAFE_DETAIL_KEYS.flatMap(key => {
+    const value = details[key];
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") return [];
+    const display = String(value).slice(0, 140);
+    return [{ key: titleCase(key), value: display }];
+  });
+}
 
 export default function AuditHistoryPage() {
   const router = useRouter();
@@ -15,26 +48,167 @@ export default function AuditHistoryPage() {
   const [hospitalName, setHospitalName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<EventCategory>("all");
+
   const load = useCallback(async () => {
     if (!supabase) { setError("Supabase is not configured for this deployment."); setLoading(false); return; }
     setLoading(true); setError("");
     try {
       const { data: auth, error: authError } = await supabase.auth.getUser();
       if (authError || !auth.user) { router.replace("/login"); return; }
-      const { data: memberships, error: memberError } = await supabase.from("hospital_memberships").select("hospital_id").order("created_at", { ascending: false }).limit(1);
+      const { data: memberships, error: memberError } = await supabase
+        .from("hospital_memberships").select("hospital_id,created_at")
+        .order("created_at", { ascending: false }).limit(10);
       if (memberError) throw memberError;
-      const hospitalId = memberships?.[0]?.hospital_id;
-      if (!hospitalId) { setEvents([]); setError("Your hospital workspace membership is not available."); return; }
-      const { data: hospital, error: hospitalError } = await supabase.from("hospitals").select("name,status").eq("id", hospitalId).maybeSingle();
-      if (hospitalError) throw hospitalError;
-      setHospitalName(hospital?.name ?? "Hospital workspace");
-      if (hospital?.status !== "active") { setEvents([]); setError("Audit history is available after hospital approval."); return; }
-      const { data, error: eventError } = await supabase.from("audit_events").select("id,entity_type,entity_id,action,details,created_at").eq("hospital_id", hospitalId).order("created_at", { ascending: false }).limit(200);
+
+      let hospitalId = "";
+      for (const membership of memberships ?? []) {
+        const { data: hospital, error: hospitalError } = await supabase
+          .from("hospitals").select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
+        if (hospitalError) throw hospitalError;
+        if (hospital?.status === "active") {
+          hospitalId = hospital.id;
+          setHospitalName(hospital.name);
+          break;
+        }
+      }
+      if (!hospitalId) {
+        setEvents([]);
+        throw new Error("Audit history is available only to members of an active hospital workspace.");
+      }
+      const { data, error: eventError } = await supabase
+        .from("audit_events")
+        .select("id,entity_type,entity_id,action,details,created_at")
+        .eq("hospital_id", hospitalId)
+        .order("created_at", { ascending: false })
+        .limit(500);
       if (eventError) throw eventError;
       setEvents((data ?? []) as EventRow[]);
-    } catch (e) { setError(e instanceof Error ? e.message : "Unable to load audit history."); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load audit history.");
+    } finally {
+      setLoading(false);
+    }
   }, [router, supabase]);
+
   useEffect(() => { void load(); }, [load]);
-  return <main style={{minHeight:"100vh",background:"#f6f8fa",color:"#172b3a",fontFamily:"Arial,Helvetica,sans-serif"}}><header style={{height:68,background:"#fff",borderBottom:"1px solid #e5ebef",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 clamp(16px,4vw,44px)"}}><Link href="/" style={{display:"inline-flex",alignItems:"center",gap:8,color:"#187e79",fontSize:12,fontWeight:700,textDecoration:"none"}}><ArrowLeft size={16}/> Overview</Link><span style={{fontSize:12,color:"#72818d"}}>{hospitalName}</span></header><div style={{maxWidth:1100,margin:"0 auto",padding:"32px clamp(16px,4vw,40px)"}}><div style={{display:"flex",alignItems:"center",gap:10,color:"#137c79"}}><FileClock size={20}/><span style={{fontSize:10,fontWeight:700,letterSpacing:1.2}}>GOVERNANCE / AUDIT HISTORY</span></div><h1 style={{fontSize:"clamp(26px,4vw,34px)",letterSpacing:-1,margin:"14px 0 8px"}}>Audit history</h1><p style={{fontSize:13,color:"#72818d",margin:"0 0 24px"}}>A chronological record of changes and operational events in your authorised hospital workspace.</p>{error && <div role="alert" style={{padding:14,background:"#fff3f1",border:"1px solid #f0d8d4",borderRadius:8,color:"#9a4e47",fontSize:12,marginBottom:16}}>{error}</div>}<section style={{background:"#fff",border:"1px solid #e5ebef",borderRadius:12,overflow:"hidden"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid #e5ebef"}}><strong style={{fontSize:13}}>Recorded events</strong><button onClick={()=>void load()} disabled={loading} style={{display:"inline-flex",alignItems:"center",gap:7,border:"1px solid #dce5e9",borderRadius:8,padding:"9px 12px",background:"#fff",color:"#187e79",fontSize:11,cursor:"pointer"}}><RefreshCw size={13}/> Refresh</button></div>{loading ? <p style={{padding:24,color:"#72818d",fontSize:12}}>Loading audit history…</p> : events.length===0 ? <div style={{padding:32,textAlign:"center",color:"#72818d",fontSize:12}}><ShieldCheck size={22}/><p>No audit events recorded yet.</p></div> : events.map(event=><article key={event.id} style={{display:"flex",gap:13,padding:"16px 18px",borderBottom:"1px solid #edf1f3"}}><div style={{width:34,height:34,display:"grid",placeItems:"center",background:"#eff5f5",color:"#538784",borderRadius:8,flexShrink:0}}><FileClock size={16}/></div><div style={{minWidth:0,flex:1}}><strong style={{fontSize:12,textTransform:"capitalize"}}>{event.action.replaceAll("_"," ")}</strong><p style={{fontSize:11,color:"#72818d",margin:"5px 0"}}>{event.entity_type.replaceAll("_"," ")} · Reference {typeof event.details?.reference_code==="string" ? event.details.reference_code : event.entity_id.slice(0,8)}</p><time style={{fontSize:10,color:"#9ba6ac"}}>{new Date(event.created_at).toLocaleString("en-GB")}</time></div></article>)}</section><p style={{fontSize:10,color:"#829099",lineHeight:1.6,marginTop:16}}>Audit visibility is limited by the signed-in user’s hospital membership and database policies.</p></div></main>;
+
+  const visible = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return events.filter(event => {
+      const matchesCategory = category === "all" || categoryFor(event) === category;
+      const matchesSearch = !query || [
+        event.action, event.entity_type, event.entity_id,
+        typeof event.details?.reference_code === "string" ? event.details.reference_code : "",
+        typeof event.details?.request_code === "string" ? event.details.request_code : "",
+        typeof event.details?.item_type === "string" ? event.details.item_type : "",
+        typeof event.details?.status === "string" ? event.details.status : "",
+      ].some(value => value.toLowerCase().includes(query));
+      return matchesCategory && matchesSearch;
+    });
+  }, [events, category, search]);
+
+  const last24Hours = events.filter(event => Date.now() - new Date(event.created_at).getTime() <= 24 * 60 * 60 * 1000).length;
+  const workEvents = events.filter(event => categoryFor(event) === "work").length;
+  const requestEvents = events.filter(event => categoryFor(event) === "requests").length;
+  const todayLabel = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date());
+
+  function exportCsv() {
+    const rows = [
+      ["Timestamp", "Entity", "Action", "Reference", "Entity ID"],
+      ...visible.map(event => [
+        formatTimestamp(event.created_at),
+        event.entity_type,
+        event.action,
+        typeof event.details?.reference_code === "string" ? event.details.reference_code : typeof event.details?.request_code === "string" ? event.details.request_code : "",
+        event.entity_id,
+      ]),
+    ];
+    const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "converge-audit-history.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <main className="audit-page">
+      <header className="audit-topbar">
+        <Link href="/" className="audit-brand">
+          <span className="audit-brand-mark"><Activity size={20}/></span>
+          <span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span>
+        </Link>
+        <div className="ops-queue-topbar-right">
+          <span className="ops-queue-hospital"><span className="ops-live-dot"/>{hospitalName || "Hospital workspace"}</span>
+          <Link href="/team" className="ops-queue-utility"><ShieldCheck size={15}/> Team & access</Link>
+          <Link href="/reports" className="ops-queue-utility"><ArrowRight size={15}/> Reports</Link>
+        </div>
+      </header>
+
+      <div className="audit-content">
+        <div className="ops-queue-breadcrumb"><Link href="/">Workspace</Link><span>/</span><span>Governance</span><span>/</span><strong>Audit history</strong></div>
+        <div className="audit-heading">
+          <div>
+            <div className="audit-kicker"><FileClock size={17}/> GOVERNANCE / RECORD OF CHANGE</div>
+            <h1>Audit history</h1>
+            <p>A time-ordered record of operational changes in your authorised hospital workspace. Search changes, narrow the event category, and export the currently filtered view.</p>
+          </div>
+          <div className="audit-actions">
+            <button className="ops-queue-secondary-button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "ops-spin" : ""}/> Refresh</button>
+            <button className="ops-queue-primary-button" onClick={exportCsv} disabled={loading || visible.length === 0}><Download size={15}/> Export CSV</button>
+          </div>
+        </div>
+        <div className="audit-date-line"><Clock3 size={14}/>{todayLabel}<span>·</span>Latest {events.length} recorded events</div>
+
+        {error && <div className="ops-queue-alert error" role="alert"><ShieldCheck size={17}/><span>{error}</span></div>}
+
+        <section className="audit-metrics" aria-label="Audit summary">
+          <article><span>Recorded events</span><strong>{loading ? "—" : events.length}</strong><small>Most recent 500 events available</small></article>
+          <article><span>Last 24 hours</span><strong>{loading ? "—" : last24Hours}</strong><small>Recent activity in this workspace</small></article>
+          <article><span>Work item events</span><strong>{loading ? "—" : workEvents}</strong><small>Tasks, cases and operational changes</small></article>
+          <article><span>Request events</span><strong>{loading ? "—" : requestEvents}</strong><small>Patient-request lifecycle changes</small></article>
+        </section>
+
+        <section className="audit-panel">
+          <div className="audit-panel-top">
+            <div><span className="ops-queue-overline">ACTIVITY REGISTER</span><h2>Recorded events</h2><p>Event details are limited to operational metadata safe for this summary view.</p></div>
+            <span className="audit-event-count">{loading ? "Loading…" : `${visible.length} matching`}</span>
+          </div>
+          <div className="audit-toolbar">
+            <label className="audit-search"><Search size={16}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search action, entity or reference" aria-label="Search audit events"/></label>
+            <div className="audit-filters" aria-label="Filter audit events">
+              {CATEGORY_FILTERS.map(item => <button key={item.value} className={category === item.value ? "active" : ""} onClick={() => setCategory(item.value)}>{item.label}</button>)}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="audit-empty"><span className="audit-empty-icon"><RefreshCw size={20} className="ops-spin"/></span><strong>Loading audit history</strong><p>Retrieving events permitted for your active hospital workspace.</p></div>
+          ) : visible.length === 0 ? (
+            <div className="audit-empty"><span className="audit-empty-icon"><CheckCircle2 size={22}/></span><strong>{events.length === 0 ? "No events recorded yet" : "No matching events"}</strong><p>{events.length === 0 ? "When a governed workflow records a change, it will appear here." : "Try a different category or search term."}</p></div>
+          ) : (
+            <div className="audit-event-list">
+              {visible.map(event => {
+                const detailItems = safeDetails(event.details);
+                const reference = typeof event.details?.reference_code === "string" ? event.details.reference_code : typeof event.details?.request_code === "string" ? event.details.request_code : event.entity_id.slice(0, 8).toUpperCase();
+                return <article className="audit-event" key={event.id}>
+                  <span className="audit-event-mark"><FileClock size={16}/></span>
+                  <div className="audit-event-main">
+                    <h3>{titleCase(event.action)}</h3>
+                    <p>{titleCase(event.entity_type)} <span>·</span> <span className="audit-event-ref">{reference}</span></p>
+                    {detailItems.length > 0 && <div className="audit-detail-grid">{detailItems.map(item => <span key={item.key}><small>{item.key}</small><strong>{item.value}</strong></span>)}</div>}
+                  </div>
+                  <time dateTime={event.created_at}>{formatTimestamp(event.created_at)}</time>
+                </article>;
+              })}
+            </div>
+          )}
+          <div className="ops-queue-panel-footer"><span>Event visibility is scoped by hospital membership and database policies.</span><Link href="/team">Review access permissions <ArrowRight size={14}/></Link></div>
+        </section>
+        <p className="audit-footer"><ShieldCheck size={15}/> Audit history is a read-only record. Do not treat it as a replacement for formal records-retention, incident-response or compliance systems.</p>
+      </div>
+    </main>
+  );
 }
