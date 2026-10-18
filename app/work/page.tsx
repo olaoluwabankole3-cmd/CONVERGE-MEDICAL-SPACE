@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, Plus, RefreshCw, Search, ShieldCheck, Users, X, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, ListChecks, Plus, RefreshCw, Search, ShieldCheck, Users, X, Save } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type WorkType = "access_case" | "appointment" | "follow_up" | "exception" | "task";
@@ -13,8 +13,8 @@ type PatientReference = { id: string; reference_code: string; care_area: string 
 type Row = { id: string; reference_code: string; title: string; summary: string | null; item_type: WorkType; priority: Priority; status: WorkStatus; owner_id: string | null; external_reference: string | null; due_at: string | null; patient_record_id: string | null; created_at: string; updated_at: string };
 const labels: Record<WorkType,string> = { access_case: "Access case", appointment: "Appointment", follow_up: "Follow-up", exception: "Exception", task: "Task" };
 const statusLabels: Record<string,string> = { draft: "Draft", open: "Open", needs_review: "Needs review", in_progress: "In progress", awaiting_response: "Awaiting response", resolved: "Resolved", closed: "Closed" };
-const titles: Record<string,string> = { access_case: "Access cases", appointment: "Appointments", follow_up: "Follow-ups & tasks", exception: "Exceptions", task: "Follow-ups & tasks" };
-const descriptions: Record<string,string> = { access_case: "Coordinate and track operational access requests.", appointment: "Review appointment-related operational work.", follow_up: "Track outstanding follow-ups and operational tasks.", exception: "Review exceptions that need operational attention.", task: "Track outstanding operational tasks." };
+const titles: Record<string,string> = { access_case: "Access cases", appointment: "Appointment work", follow_up: "Follow-ups", exception: "Exceptions", task: "Tasks" };
+const descriptions: Record<string,string> = { access_case: "Coordinate access-related operational work, from intake through resolution.", appointment: "Coordinate the operational actions related to appointment requests. Confirmed appointment times are managed in the patient-request workflow.", follow_up: "Keep promised callbacks, pending information, and next steps visible until they are completed.", exception: "Investigate blocked, overdue, or high-risk operational issues and record their resolution.", task: "Assign clear operational actions, monitor progress, and keep ownership and due dates visible." };
 const validTypes: WorkType[] = ["access_case", "appointment", "follow_up", "exception", "task"];
 const validStatuses: WorkStatus[] = ["draft", "open", "needs_review", "in_progress", "awaiting_response", "resolved", "closed"];
 const validPriorities: Priority[] = ["low", "medium", "high", "urgent"];
@@ -146,53 +146,122 @@ export default function WorkPage() {
     finally { setChangingId(""); }
   }
 
-  return <main style={{minHeight:"100vh",background:"#f6f8fa",color:"#172b3a",fontFamily:"Arial,Helvetica,sans-serif"}}>
-    <header style={{minHeight:68,background:"#fff",borderBottom:"1px solid #e5ebef",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px clamp(16px,4vw,44px)",gap:12}}>
-      <Link href="/" style={{display:"inline-flex",alignItems:"center",gap:8,color:"#187e79",fontSize:12,fontWeight:700,textDecoration:"none"}}><ArrowLeft size={16}/> Overview</Link>
-      <span style={{fontSize:12,color:"#72818d",textAlign:"right"}}>{hospitalName || "Hospital workspace"}</span>
-    </header>
-    <div style={{maxWidth:1200,margin:"0 auto",padding:"32px clamp(16px,4vw,40px)"}}>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,color:"#137c79"}}>{icon}<span style={{fontSize:10,fontWeight:700,letterSpacing:1.2}}>WORKSPACE / OPERATIONAL QUEUE</span></div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,flexWrap:"wrap"}}>
-        <div><h1 style={{fontSize:"clamp(26px,4vw,34px)",letterSpacing:-1,margin:"12px 0 8px"}}>{titles[type] ?? "Operational work"}</h1><p style={{color:"#72818d",fontSize:13,margin:"0 0 24px"}}>{descriptions[type] ?? "Review and coordinate operational work."}</p></div>
-        {canCreate && <button onClick={()=>{setError("");setNotice("");setShowCreate(true);}} style={{display:"inline-flex",alignItems:"center",gap:8,border:0,borderRadius:8,padding:"11px 14px",background:"#167c78",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}><Plus size={16}/> New record</button>}
+  const openCount = items.filter(item => !["resolved", "closed"].includes(item.status)).length;
+  const reviewCount = items.filter(item => item.status === "needs_review" || item.status === "awaiting_response").length;
+  const urgentCount = items.filter(item => ["high", "urgent"].includes(item.priority) && !["resolved", "closed"].includes(item.status)).length;
+  const overdueCount = items.filter(item => item.due_at && new Date(item.due_at).getTime() < Date.now() && !["resolved", "closed"].includes(item.status)).length;
+  const viewTabs: { value: WorkType; label: string }[] = [
+    { value: "access_case", label: "Access cases" },
+    { value: "follow_up", label: "Follow-ups" },
+    { value: "task", label: "Tasks" },
+    { value: "exception", label: "Exceptions" },
+    { value: "appointment", label: "Appointment work" },
+  ];
+  const pageIcon = type === "appointment" ? <CalendarDays size={19} /> : type === "exception" ? <AlertCircle size={19} /> : type === "follow_up" ? <Clock3 size={19} /> : type === "task" ? <ListChecks size={19} /> : <Users size={19} />;
+
+  return (
+    <main className="ops-queue-page">
+      <header className="ops-queue-topbar">
+        <Link href="/" className="ops-queue-brand">
+          <span className="ops-queue-brand-mark"><Activity size={20} /></span>
+          <span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span>
+        </Link>
+        <div className="ops-queue-topbar-right">
+          <span className="ops-queue-hospital"><span className="ops-live-dot" />{hospitalName || "Hospital workspace"}</span>
+          <Link href="/audit" className="ops-queue-utility"><ShieldCheck size={15} /> Audit history</Link>
+          <Link href="/my-work" className="ops-queue-utility"><ClipboardCheck size={15} /> My work</Link>
+        </div>
+      </header>
+
+      <div className="ops-queue-content">
+        <div className="ops-queue-breadcrumb"><Link href="/">Workspace</Link><span>/</span><span>Operations</span><span>/</span><strong>{titles[type]}</strong></div>
+
+        <div className="ops-queue-heading">
+          <div className="ops-queue-heading-copy">
+            <div className="ops-queue-eyebrow">{pageIcon}<span>OPERATIONS WORKSPACE</span></div>
+            <h1>{titles[type] ?? "Operational work"}</h1>
+            <p>{descriptions[type] ?? "Review and coordinate operational work."}</p>
+          </div>
+          <div className="ops-queue-heading-actions">
+            <button className="ops-queue-secondary-button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "ops-spin" : ""} /> Refresh</button>
+            {canCreate && <button className="ops-queue-primary-button" onClick={() => { setError(""); setNotice(""); setShowCreate(true); }}><Plus size={16} /> New {labels[type].toLowerCase()}</button>}
+          </div>
+        </div>
+
+        <nav className="ops-queue-tabs" aria-label="Operational queues">
+          {viewTabs.map(tab => (
+            <Link key={tab.value} href={`/work?type=${tab.value}`} className={type === tab.value ? "ops-queue-tab active" : "ops-queue-tab"}>
+              {tab.label}
+            </Link>
+          ))}
+          <Link href="/appointments" className="ops-queue-tab">Scheduled appointments <ArrowRight size={13} /></Link>
+        </nav>
+
+        {error && <div className="ops-queue-alert error" role="alert"><AlertCircle size={17} /><span>{error}</span><button onClick={() => setError("")} aria-label="Dismiss error"><X size={15} /></button></div>}
+        {notice && <div className="ops-queue-alert success" role="status"><CheckCircle2 size={17} /><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss notice"><X size={15} /></button></div>}
+
+        <section className="ops-queue-metrics" aria-label="Queue overview">
+          <article><span>Open {titles[type].toLowerCase()}</span><strong>{loading ? "—" : openCount}</strong><small>Items not yet resolved or closed</small></article>
+          <article><span>Needs attention</span><strong>{loading ? "—" : reviewCount}</strong><small>Review or response required</small></article>
+          <article className={urgentCount > 0 ? "warn" : ""}><span>High priority</span><strong>{loading ? "—" : urgentCount}</strong><small>High or urgent open items</small></article>
+          <article className={overdueCount > 0 ? "warn" : ""}><span>Overdue</span><strong>{loading ? "—" : overdueCount}</strong><small>Past due date and still open</small></article>
+        </section>
+
+        <section className="ops-queue-panel">
+          <div className="ops-queue-panel-heading">
+            <div><span className="ops-queue-overline">WORK REGISTER</span><h2>{titles[type]}</h2><p>Search records, inspect ownership and update operational status.</p></div>
+            <span className="ops-queue-result-count">{loading ? "Loading…" : `${visible.length} shown`}</span>
+          </div>
+          <div className="ops-queue-toolbar">
+            <label className="ops-queue-search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reference, title or patient reference" aria-label="Search this queue" /></label>
+            <label className="ops-queue-status-filter"><span>Status</span><select aria-label="Filter by status" value={status} onChange={e => setStatus(e.target.value)}><option value="open">Open items</option><option value="needs_review">Needs review</option><option value="in_progress">In progress</option><option value="awaiting_response">Awaiting response</option><option value="resolved">Resolved</option><option value="closed">Closed</option><option value="all">All statuses</option></select></label>
+          </div>
+
+          {loading ? (
+            <div className="ops-queue-state"><span className="ops-queue-state-mark"><RefreshCw size={19} className="ops-spin"/></span><strong>Loading authorised records</strong><p>Retrieving records for your active hospital workspace.</p></div>
+          ) : visible.length === 0 ? (
+            <div className="ops-queue-state"><span className="ops-queue-state-mark"><CheckCircle2 size={21}/></span><strong>No matching {labels[type].toLowerCase()} records</strong><p>{search || status !== "open" ? "Try another search or status filter." : "This queue is clear. New records will appear here when they are created."}</p>{canCreate && !search && status === "open" && <button className="ops-queue-primary-button" onClick={() => { setError(""); setNotice(""); setShowCreate(true); }}><Plus size={15}/> Create first record</button>}</div>
+          ) : (
+            <div className="ops-queue-table-wrap">
+              <table className="ops-queue-table">
+                <thead><tr><th>Reference / record</th><th>Status</th><th>Priority</th><th>Owner</th><th>Due date</th><th>Last updated</th><th>Update status</th></tr></thead>
+                <tbody>{visible.map(item => {
+                  const linked = patientReferences.find(reference => reference.id === item.patient_record_id);
+                  const overdue = !!item.due_at && new Date(item.due_at).getTime() < Date.now() && !["resolved", "closed"].includes(item.status);
+                  return <tr key={item.id}>
+                    <td data-label="Reference / record"><div className="ops-queue-record-ref">{item.reference_code}</div><div className="ops-queue-record-title">{item.title}</div>{linked && <span className="ops-queue-patient-ref">Patient ref · {linked.reference_code}{linked.care_area ? ` · ${linked.care_area}` : ""}</span>}{item.summary && <p className="ops-queue-record-summary">{item.summary}</p>}</td>
+                    <td data-label="Status"><span className={`ops-queue-status-pill ops-status-${item.status}`}>{statusLabels[item.status] ?? item.status}</span></td>
+                    <td data-label="Priority"><span className={`ops-queue-priority ops-priority-${item.priority}`}>{item.priority}</span></td>
+                    <td data-label="Owner"><span className={item.owner_id ? "ops-queue-owner" : "ops-queue-owner unassigned"}>{item.owner_id ? "Assigned" : "Unassigned"}</span></td>
+                    <td data-label="Due date"><span className={overdue ? "ops-queue-due overdue" : "ops-queue-due"}>{item.due_at ? new Date(item.due_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "No due date"}</span></td>
+                    <td data-label="Last updated"><span className="ops-queue-date">{new Date(item.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span></td>
+                    <td data-label="Update status"><select aria-label={"Update status for " + item.reference_code} value={item.status} disabled={changingId === item.id} onChange={e => void updateStatus(item, e.target.value as WorkStatus)} className="ops-queue-row-select">{validStatuses.map(value => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            </div>
+          )}
+          <div className="ops-queue-panel-footer"><span>Hospital-scoped records · Updates follow workspace permissions.</span><Link href="/reports">View reporting <ArrowRight size={14}/></Link></div>
+        </section>
+        <p className="ops-queue-privacy"><ShieldCheck size={15}/> Use operational references only. Do not put direct patient identifiers, diagnoses or clinical notes into record titles or summaries.</p>
       </div>
-      {error && <div role="alert" style={{padding:14,background:"#fff3f1",border:"1px solid #f0d8d4",borderRadius:8,color:"#9a4e47",fontSize:12,marginBottom:16}}>{error}</div>}
-      {notice && <div role="status" style={{padding:12,background:"#edf8f4",border:"1px solid #cce7dc",borderRadius:8,color:"#276c5b",fontSize:12,marginBottom:16}}>{notice}</div>}
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:18}}>
-        <label style={{display:"flex",alignItems:"center",gap:8,background:"#fff",border:"1px solid #e5ebef",borderRadius:8,padding:"10px 12px",flex:"1 1 230px",color:"#72818d"}}><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search reference or title" style={{border:0,outline:0,width:"100%",fontSize:12}}/></label>
-        <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} style={{border:"1px solid #e5ebef",borderRadius:8,padding:"10px 12px",background:"#fff",color:"#344b57",fontSize:12}}><option value="open">Open items</option><option value="needs_review">Needs review</option><option value="in_progress">In progress</option><option value="awaiting_response">Awaiting response</option><option value="resolved">Resolved</option><option value="closed">Closed</option><option value="all">All statuses</option></select>
-        <button onClick={()=>void load()} disabled={loading} style={{display:"inline-flex",alignItems:"center",gap:7,border:"1px solid #dce5e9",borderRadius:8,padding:"10px 13px",background:"#fff",color:"#187e79",fontSize:12,cursor:"pointer"}}><RefreshCw size={14}/> Refresh</button>
-      </div>
-      <section style={{background:"#fff",border:"1px solid #e5ebef",borderRadius:12,overflow:"hidden"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid #e5ebef"}}><strong style={{fontSize:13}}>Records</strong><span style={{fontSize:11,color:"#72818d"}}>{visible.length} shown</span></div>
-        {loading ? <p style={{padding:24,color:"#72818d",fontSize:12}}>Loading authorised records…</p> : visible.length === 0 ? <div style={{padding:36,textAlign:"center"}}><CheckCircle2 size={24} color="#7a9e98"/><p style={{fontSize:13,fontWeight:700}}>No matching records</p><p style={{fontSize:12,color:"#72818d"}}>Create a record for this queue or try another status filter. Records remain scoped to your authorised hospital.</p></div> :
-          <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800,textAlign:"left"}}><thead><tr>{["REFERENCE / TITLE","STATUS","PRIORITY","DUE DATE","UPDATED","UPDATE STATUS"].map(label=><th key={label} style={{padding:"12px 16px",fontSize:9,letterSpacing:".7px",color:"#829099",background:"#fafcfc",borderBottom:"1px solid #e5ebef"}}>{label}</th>)}</tr></thead><tbody>{visible.map(item=><tr key={item.id}>
-            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3"}}><strong style={{display:"block",fontSize:12,marginBottom:5}}>{item.reference_code}</strong><span style={{fontSize:12,color:"#526570"}}>{item.title}</span>{patientReferences.find(reference => reference.id === item.patient_record_id) && <p style={{fontSize:10,color:"#167c78",margin:"6px 0 0"}}>Patient ref: {patientReferences.find(reference => reference.id === item.patient_record_id)?.reference_code}</p>}{item.summary && <p style={{fontSize:10,color:"#829099",margin:"6px 0 0",maxWidth:400}}>{item.summary}</p>}</td>
-            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11}}>{statusLabels[item.status] ?? item.status}</td>
-            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11,textTransform:"capitalize"}}>{item.priority}</td>
-            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11,color:"#72818d"}}>{item.due_at ? new Date(item.due_at).toLocaleDateString("en-GB") : "—"}</td>
-            <td style={{padding:"15px 16px",borderBottom:"1px solid #edf1f3",fontSize:11,color:"#72818d"}}>{new Date(item.updated_at).toLocaleDateString("en-GB")}</td>
-            <td style={{padding:"12px 14px",borderBottom:"1px solid #edf1f3"}}><select aria-label={"Update status for "+item.reference_code} value={item.status} disabled={changingId===item.id} onChange={e=>void updateStatus(item,e.target.value as WorkStatus)} style={{maxWidth:155,border:"1px solid #dce5e9",borderRadius:7,padding:8,background:"#fff",fontSize:11,color:"#344b57"}}>{validStatuses.map(value=><option key={value} value={value}>{statusLabels[value]}</option>)}</select></td>
-          </tr>)}</tbody></table></div>}
-      </section>
-      <p style={{fontSize:10,color:"#829099",lineHeight:1.6,marginTop:16}}>Operational references only. Avoid patient names, dates of birth, diagnoses, or other direct identifiers in titles and summaries. Changes are subject to Supabase row-level security.</p>
-    </div>
-    {showCreate && <div role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowCreate(false);}} style={{position:"fixed",inset:0,zIndex:50,background:"rgba(17,35,44,.42)",display:"grid",placeItems:"center",padding:16}}>
-      <section role="dialog" aria-modal="true" aria-labelledby="create-title" style={{width:"min(640px,100%)",maxHeight:"92vh",overflowY:"auto",background:"#fff",borderRadius:14,padding:"24px clamp(18px,4vw,30px)",boxShadow:"0 24px 80px rgba(0,0,0,.18)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start"}}><div><p style={{fontSize:10,letterSpacing:1.2,color:"#167c78",fontWeight:700,margin:"0 0 8px"}}>NEW {labels[type].toUpperCase()}</p><h2 id="create-title" style={{fontSize:23,margin:"0 0 8px",letterSpacing:-.5}}>Create operational record</h2><p style={{fontSize:12,color:"#72818d",margin:"0 0 22px"}}>Use an internal reference. Do not include unnecessary patient-identifying information.</p></div><button aria-label="Close form" onClick={()=>setShowCreate(false)} style={{border:0,background:"transparent",cursor:"pointer",color:"#72818d"}}><X size={20}/></button></div>
-        <form onSubmit={createItem} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Internal reference *<input required maxLength={80} value={newReference} onChange={e=>setNewReference(e.target.value)} placeholder="e.g. ACC-2026-001" style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Title *<input required minLength={3} maxLength={240} value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Brief operational description" style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570",gridColumn:"1 / -1"}}>Linked patient reference (optional)<select value={newPatientRecordId} onChange={e=>setNewPatientRecordId(e.target.value)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,background:"#fff"}}><option value="">No patient reference linked</option>{patientReferences.map(reference=><option key={reference.id} value={reference.id}>{reference.reference_code}{reference.care_area ? " · "+reference.care_area : ""}</option>)}</select><span style={{fontSize:10,color:"#829099"}}>Only active references from this hospital are available.</span></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Priority<select value={newPriority} onChange={e=>setNewPriority(e.target.value as Priority)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,background:"#fff"}}>{validPriorities.map(value=><option key={value} value={value}>{value[0].toUpperCase()+value.slice(1)}</option>)}</select></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Initial status<select value={newStatus} onChange={e=>setNewStatus(e.target.value as WorkStatus)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,background:"#fff"}}>{validStatuses.map(value=><option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>External reference (optional)<input maxLength={120} value={newExternalReference} onChange={e=>setNewExternalReference(e.target.value)} placeholder="Non-sensitive external ID" style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570"}}>Due date (optional)<input type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13}}/></label>
-          <label style={{display:"grid",gap:6,fontSize:12,color:"#526570",gridColumn:"1 / -1"}}>Summary (optional)<textarea maxLength={2000} rows={3} value={newSummary} onChange={e=>setNewSummary(e.target.value)} placeholder="Short operational context; avoid clinical details and direct identifiers." style={{padding:11,border:"1px solid #dce5e9",borderRadius:8,fontSize:13,resize:"vertical"}}/></label>
-          <div style={{display:"flex",justifyContent:"flex-end",gap:10,gridColumn:"1 / -1",marginTop:6}}><button type="button" onClick={()=>setShowCreate(false)} style={{padding:"11px 15px",border:"1px solid #dce5e9",borderRadius:8,background:"#fff",color:"#526570",cursor:"pointer"}}>Cancel</button><button type="submit" disabled={saving} style={{display:"inline-flex",alignItems:"center",gap:8,padding:"11px 15px",border:0,borderRadius:8,background:"#167c78",color:"#fff",fontWeight:700,cursor:saving?"wait":"pointer"}}><Save size={15}/>{saving?"Saving…":"Create record"}</button></div>
-        </form>
-      </section>
-    </div>}
-  </main>;
+
+      {showCreate && <div className="ops-queue-modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !saving) setShowCreate(false); }}>
+        <section className="ops-queue-modal" role="dialog" aria-modal="true" aria-labelledby="create-title">
+          <div className="ops-queue-modal-heading"><div><span className="ops-queue-overline">NEW {labels[type].toUpperCase()}</span><h2 id="create-title">Create {labels[type].toLowerCase()}</h2><p>Keep the description operational and reference-first.</p></div><button className="ops-queue-close" aria-label="Close form" onClick={() => setShowCreate(false)} disabled={saving}><X size={19}/></button></div>
+          <form className="ops-queue-form" onSubmit={createItem}>
+            <label>Internal reference *<input required minLength={2} maxLength={80} value={newReference} onChange={e => setNewReference(e.target.value)} placeholder={type === "access_case" ? "e.g. AC-2026-001" : type === "appointment" ? "e.g. AP-2026-001" : type === "follow_up" ? "e.g. FU-2026-001" : type === "exception" ? "e.g. EX-2026-001" : "e.g. TK-2026-001"}/></label>
+            <label>Title *<input required minLength={3} maxLength={240} value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Brief operational description"/></label>
+            <label className="full">Linked patient reference (optional)<select value={newPatientRecordId} onChange={e => setNewPatientRecordId(e.target.value)}><option value="">No patient reference linked</option>{patientReferences.map(reference => <option key={reference.id} value={reference.id}>{reference.reference_code}{reference.care_area ? " · " + reference.care_area : ""}</option>)}</select><small>Only active references from this hospital are available.</small></label>
+            <label>Priority<select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>{validPriorities.map(value => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>)}</select></label>
+            <label>Initial status<select value={newStatus} onChange={e => setNewStatus(e.target.value as WorkStatus)}>{validStatuses.map(value => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label>
+            <label>External reference (optional)<input maxLength={120} value={newExternalReference} onChange={e => setNewExternalReference(e.target.value)} placeholder="Non-sensitive external ID"/></label>
+            <label>Due date (optional)<input type="datetime-local" value={newDueAt} onChange={e => setNewDueAt(e.target.value)}/></label>
+            <label className="full">Summary (optional)<textarea maxLength={2000} rows={3} value={newSummary} onChange={e => setNewSummary(e.target.value)} placeholder="Short operational context; avoid clinical details and direct identifiers."/></label>
+            <div className="ops-queue-form-actions"><button type="button" className="ops-queue-secondary-button" onClick={() => setShowCreate(false)} disabled={saving}>Cancel</button><button type="submit" className="ops-queue-primary-button" disabled={saving}><Save size={15}/>{saving ? "Saving…" : "Create record"}</button></div>
+          </form>
+        </section>
+      </div>}
+    </main>
+  );
 }
