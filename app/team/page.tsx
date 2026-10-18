@@ -137,7 +137,7 @@ export default function HospitalTeamPage() {
         {!loading && hospital?.status === "active" && !canManage && <section className="onboarding-card"><div className="onboarding-card-title"><span className="onboarding-icon"><ShieldCheck size={20} /></span><div><h2>Administrator permission required</h2><p>Your current role is {role}. Ask the hospital owner or an administrator to manage team access.</p></div></div></section>}
         {!loading && hospital?.status === "active" && canManage && <>
           <section className="onboarding-card" style={{ marginBottom: 18 }}>
-            <div className="onboarding-card-title"><span className="onboarding-icon"><Building2 size={20} /></span><div><h2>{hospital.name}</h2><p>Hospital workspace · {members.length} current member(s)</p></div><span className="approval-pending" style={{ color: "#176b5f", background: "#e7f5ef" }}>Active</span></div>
+            <div className="onboarding-card-title"><span className="onboarding-icon"><Building2 size={20} /></span><div><h2>{hospital.name}</h2><p>Hospital workspace · {members.length} current member(s)</p></div><span className="approval-pending" style={{ color: "#bfeecb", background: "rgba(164,237,193,.10)", border: "1px solid rgba(164,237,193,.18)" }}>Active</span></div>
           </section>
           <div className="onboarding-grid">
             <section className="onboarding-card">
@@ -156,7 +156,7 @@ export default function HospitalTeamPage() {
                   <span className="onboarding-icon" style={{ width: 36, height: 36, flexShrink: 0 }}><Users size={16} /></span>
                   <div style={{ minWidth: 0, flex: 1 }}><strong style={{ display: "block", overflowWrap: "anywhere", fontSize: 13 }}>{member.email || "Invited account"}</strong><span style={{ color: "var(--muted, #72818d)", fontSize: 12 }}>{member.role.replaceAll("_", " ")}{member.created_at ? ` · Added ${new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(member.created_at))}` : ""}</span></div>
                   {member.role === "owner" ? <span className="approval-pending">Owner</span> : <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                    <select aria-label={`Role for ${member.email || "team member"}`} value={member.role} disabled={saving || (role !== "owner" && member.role === "admin")} onChange={event => void changeMemberRole(member, event.target.value)} style={{ border: "1px solid var(--line, #e5ebef)", borderRadius: 7, padding: "7px 8px", maxWidth: 135, background: "#fff", fontSize: 12 }}>
+                    <select aria-label={`Role for ${member.email || "team member"}`} value={member.role} disabled={saving || (role !== "owner" && member.role === "admin")} onChange={event => void changeMemberRole(member, event.target.value)} style={{ border: "1px solid var(--line, #e5ebef)", borderRadius: 7, padding: "7px 8px", maxWidth: 135, background: "#0d1511", color: "#f3f5f3", fontSize: 12 }}>
                       {roles.filter(item => item.value !== "admin" || role === "owner" || member.role === "admin").map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>
                     <button type="button" className="approval-reject" disabled={saving || (role !== "owner" && member.role === "admin")} onClick={() => void removeMember(member)} style={{ padding: "7px 9px", fontSize: 11 }}>Remove</button>
