@@ -106,3 +106,17 @@ Medical Intelligence is a sector workspace within the wider Converge platform. I
 - **Responsive behaviour:** the existing clinical workspace, patient-access, sign-in, My Work, and Notifications layouts remain intact; this change is a visual-system alignment, not a workflow redesign.
 
 Shared tokens and component overrides live in app/converge-brand.css; standalone My Work and Notifications pages also use the matching palette in their CSS modules.
+
+
+## Operational workspaces
+
+The authenticated workspace navigation separates operational queues by purpose:
+
+- **Access cases** — `/work?type=access_case`
+- **Appointments** — `/appointments` reads the hospital-scoped appointment register. Scheduling proposals and confirmations remain in the governed `/requests` workflow.
+- **Follow-ups** — `/work?type=follow_up`
+- **Tasks** — `/work?type=task`
+- **Exceptions** — `/work?type=exception`
+- **Audit history** — `/audit` provides a searchable, category-filtered view of the latest 500 hospital-scoped events and CSV export for the current filtered view.
+
+The work queues share one responsive interaction pattern while showing queue-specific headings and context. Creating work records and updating their operational status follows the existing work-item permissions. Appointment records are displayed separately from appointment-related work items; this screen does not bypass the request workflow to schedule, confirm, or cancel appointments. Audit history is read-only.
