@@ -13,7 +13,6 @@ permissions:
 
 jobs:
   create-lockfile:
-    if: ${{ hashFiles('package-lock.json') == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,15 +24,22 @@ jobs:
         with:
           node-version: 20
 
+      - name: Check whether a lockfile is missing
+        id: lock
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate dependency lockfile
+        if: steps.lock.outputs.needed == 'true'
         run: npm install --package-lock-only --ignore-scripts --no-audit
 
       - name: Commit the generated lockfile
+        if: steps.lock.outputs.needed == 'true'
         run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "No lockfile changes to commit."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
