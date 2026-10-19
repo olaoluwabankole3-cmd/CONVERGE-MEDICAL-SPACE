@@ -1437,3 +1437,8 @@ tbody tr:hover, tbody tr.selected-row { background: rgba(164,237,193,.035); }
 @media (prefers-reduced-motion: reduce) {
   .ops-spin { animation: none !important; }
 }
+
+
+/* Overview intentionally stays focused on workload and actionable exceptions.
+   Detailed event history lives on the dedicated Audit History screen. */
+.activity-panel { display: none !important; }
