@@ -1,6 +1,6 @@
 begin;
 
-select plan(18);
+select plan(22);
 
 -- Deterministic synthetic users/hospitals. Entire test rolls back.
 insert into auth.users (
@@ -154,6 +154,23 @@ select ok(
 select ok(
   not has_table_privilege('anon', 'public.user_notifications', 'select'),
   'Anonymous role cannot directly read notifications'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.is_hospital_member(uuid)', 'execute'),
+  'Anonymous role cannot execute the SECURITY DEFINER membership helper'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.is_hospital_member(uuid)', 'execute'),
+  'Authenticated role can execute membership helper needed by RLS'
+);
+select ok(
+  not has_function_privilege('anon', 'public.has_hospital_role(uuid,public.hospital_member_role[])', 'execute'),
+  'Anonymous role cannot execute the SECURITY DEFINER role helper'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.has_hospital_role(uuid,public.hospital_member_role[])', 'execute'),
+  'Authenticated role can execute role helper needed by RLS'
 );
 
 reset role;
