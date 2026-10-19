@@ -81,7 +81,7 @@ export default function HospitalOnboardingPage() {
       setName(""); setRegistrationNumber(""); setCity("");
       // Take the owner to their own workspace immediately. It will show the
       // pending-approval state until a platform administrator activates it.
-      router.replace("/");
+      router.replace("/overview");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Hospital registration failed.");
     } finally {

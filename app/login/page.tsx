@@ -50,7 +50,7 @@ export default function LoginPage() {
           password,
         });
         if (authError) throw authError;
-        window.location.assign("/");
+        window.location.assign("/overview");
         return;
       }
     } catch (cause) {
@@ -89,7 +89,7 @@ export default function LoginPage() {
           <p className="auth-switch">{mode === "signin" ? "New to Converge?" : "Already have an account?"} <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
           <p className="auth-legal"><ShieldCheck size={14} /> Do not submit patient information through this sign-in page.</p>
           <Link href="/patient-login" className="auth-back">Looking for care? Open the patient portal →</Link>
-          <Link href="/" className="auth-back">← Back to dashboard preview</Link>
+          <Link href="/" className="auth-back">← Back to platform home</Link>
         </div>
       </section>
     </main>
