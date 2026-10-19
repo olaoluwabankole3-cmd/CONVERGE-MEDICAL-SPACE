@@ -100,7 +100,8 @@ body.cursor-present .medical-landing > .cursor-aura { opacity:1; }
 .med-live-cursor>span { margin-top:16px; padding:5px 7px; color:#16251b; background:#a4edc1; border-radius:3px 5px 5px 5px; font-size:7px; font-weight:800; white-space:nowrap; }
 .med-live-cursor>span i { margin-left:4px; color:#2e8151; font-size:7px; font-style:normal; }
 .med-live-cursor>b { position:absolute; left:0; top:0; width:26px; height:26px; border:1px solid rgba(164,237,193,.7); border-radius:50%; opacity:0; animation:medCursorClick 3.4s ease-out infinite; }
-.med-live-cursor-two { animation-delay:-4s; } .med-live-cursor-two>span { color:#2f2117; background:#e5b38e; } .med-live-cursor-two>span i { color:#8a522a; } .med-live-cursor-two>b { border-color:rgba(229,179,142,.75); animation-delay:-1.6s; }
+.med-live-cursor-one { left:32%; top:62%; }
+.med-live-cursor-two { right:19%; top:17%; animation-delay:-4s; } .med-live-cursor-two>span { color:#2f2117; background:#e5b38e; } .med-live-cursor-two>span i { color:#8a522a; } .med-live-cursor-two>b { border-color:rgba(229,179,142,.75); animation-delay:-1.6s; }
 .med-scene-caption { position:absolute; bottom:1%; left:13%; right:13%; display:flex; align-items:center; justify-content:center; gap:8px; color:#819286; font-size:9px; text-align:center; }
 .med-scene-caption span { width:5px; height:5px; flex:0 0 5px; border-radius:50%; background:var(--med-mint); box-shadow:0 0 0 4px rgba(164,237,193,.07); }
 .med-hero-ribbon { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:clamp(12px,2.1vw,31px); min-height:54px; padding:12px 24px; border-top:1px solid rgba(185,220,194,.09); color:#8a9b8f; font-size:8px; font-weight:750; letter-spacing:.17em; }
