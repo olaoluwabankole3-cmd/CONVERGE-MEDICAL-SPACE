@@ -56,31 +56,28 @@ export async function PATCH(request: NextRequest) {
   if (decision === "rejected" && !rejectionReason) {
     return NextResponse.json({ error: "Provide a reason when rejecting a registration." }, { status: 400 });
   }
-  const { data: hospital, error: updateError } = await auth.adminClient
-    .from("hospitals")
-    .update({
-      status: decision,
-      approved_by: decision === "active" ? auth.user.id : null,
-      approved_at: decision === "active" ? new Date().toISOString() : null,
-      rejection_reason: decision === "rejected" ? rejectionReason : null,
-    })
-    .eq("id", hospitalId)
-    .eq("status", "pending")
-    .select("id,name,status")
-    .maybeSingle();
-  if (updateError) return NextResponse.json({ error: "Unable to update this registration." }, { status: 500 });
-  if (!hospital) return NextResponse.json({ error: "This registration is no longer pending. Refresh the queue." }, { status: 409 });
+  const { data: hospital, error: decisionError } = await auth.adminClient.rpc(
+    "decide_hospital_registration",
+    {
+      p_hospital_id: hospitalId,
+      p_actor_user_id: auth.user.id,
+      p_decision: decision,
+      p_rejection_reason: decision === "rejected" ? rejectionReason : null,
+    },
+  );
 
-  const { error: auditError } = await auth.adminClient.from("audit_events").insert({
-    hospital_id: hospital.id,
-    actor_id: auth.user.id,
-    entity_type: "hospital",
-    entity_id: hospital.id,
-    action: decision === "active" ? "hospital_approved" : "hospital_rejected",
-    details: decision === "active" ? { hospital_name: hospital.name } : { hospital_name: hospital.name, rejection_reason: rejectionReason },
-  });
-  if (auditError) {
-    return NextResponse.json({ hospital, warning: "The decision was saved, but its audit event could not be written." }, { status: 200 });
+  if (decisionError) {
+    return NextResponse.json(
+      { error: "Unable to save the decision and audit event. Confirm the latest hospital-approval migration has been applied." },
+      { status: 500 },
+    );
   }
+  if (!hospital) {
+    return NextResponse.json(
+      { error: "This registration is no longer pending. Refresh the queue." },
+      { status: 409 },
+    );
+  }
+
   return NextResponse.json({ hospital });
 }
