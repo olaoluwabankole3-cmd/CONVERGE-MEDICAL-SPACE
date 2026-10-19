@@ -1,6 +1,6 @@
 begin;
 
-select plan(27);
+select plan(28);
 
 -- Deterministic synthetic users/hospitals. Entire test rolls back.
 insert into auth.users (
@@ -179,15 +179,17 @@ select is(
   'Patient reference status change is audit logged atomically'
 );
 
-select is(
-  (with changed as (
-    update public.work_items set title = 'Cross-tenant mutation attempt'
-    where hospital_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-    returning id
-  ) select count(*)::integer from changed),
-  0,
-  'Cross-tenant work-item update changes zero rows'
+select lives_ok(
+  $$update public.work_items set title = 'Cross-tenant mutation attempt' where hospital_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'$$,
+  'Cross-tenant update statement does not raise an error'
 );
+reset role;
+select is(
+  (select count(*)::integer from public.work_items where hospital_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' and title = 'Cross-tenant mutation attempt'),
+  0,
+  'Cross-tenant update did not alter Hospital B data'
+);
+set local role authenticated;
 select throws_ok(
   $$insert into public.work_items
     (hospital_id, reference_code, title, item_type, priority, status, created_by)
