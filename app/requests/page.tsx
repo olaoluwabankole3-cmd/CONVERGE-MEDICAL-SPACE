@@ -80,6 +80,15 @@ export default function HospitalRequestsPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // When an operator opens a linked access case, focus its canonical patient request.
+  useEffect(() => {
+    const requestId = new URLSearchParams(window.location.search).get("requestId");
+    if (!requestId || !requests.some(item => item.id === requestId)) return;
+    setSelectedId(requestId);
+    setFilter("all");
+    setSearch("");
+  }, [requests]);
+
   const visible = useMemo(() => requests.filter(item => {
     const matchesFilter = filter === "all"
       || (filter === "open" && !terminal.has(item.status))
