@@ -378,3 +378,70 @@
   .insightCard { padding: 15px 14px; }
   .sidePanel { padding: 14px; }
 }
+
+
+/* Final product finish — operations analyst uses the same restrained register system */
+.page { background: var(--converge-bg, #0b100e); color: var(--converge-text, #edf2ee); }
+.header { background: #0d1310; border-bottom-color: var(--converge-border, rgba(202,224,207,.12)); backdrop-filter: none; }
+.brandMark { width: 32px; height: 32px; border-radius: 7px; box-shadow: none; }
+.hero { padding-top: 28px; padding-bottom: 19px; gap: 18px; }
+.hero h1 { margin: 9px 0 7px; font-size: clamp(28px, 2.2vw, 33px); font-weight: 630; line-height: 1.16; letter-spacing: -.045em; }
+.heroCopy { max-width: 690px; font-size: 12.5px; line-height: 1.65; }
+.modeBadge { border-radius: 5px; box-shadow: none; font-size: 10px; font-weight: 600; }
+.refreshButton { min-height: 35px; border-radius: 6px; box-shadow: none; font-size: 11px; font-weight: 600; }
+.refreshButton:hover:not(:disabled) { transform: none; }
+.metricsGrid { gap: 0; margin-bottom: 20px; border: 1px solid var(--converge-border); border-radius: 8px; overflow: hidden; background: var(--converge-panel); box-shadow: none; }
+.metricCard { padding: 14px 15px; border: 0; border-right: 1px solid var(--converge-border); border-radius: 0; background: transparent; box-shadow: none; }
+.metricCard:last-child { border-right: 0; }
+.metricIcon { width: 28px; height: 28px; border-radius: 6px; }
+.metricValue { color: #edf2ee; font-size: 27px; font-weight: 620; letter-spacing: -.045em; }
+.analysisGrid { gap: 18px; }
+.sectionHeading h2 { font-size: 17px; font-weight: 620; letter-spacing: -.025em; }
+.readOnlyTag { border-radius: 5px; font-size: 9.5px; font-weight: 600; }
+.insightList { display: grid; gap: 0; border: 1px solid var(--converge-border); border-radius: 8px; background: var(--converge-panel); overflow: hidden; }
+.insightCard { padding: 15px 16px; background: transparent; border: 0; border-bottom: 1px solid var(--converge-border); border-radius: 0; box-shadow: none; transition: background .14s ease; }
+.insightCard:last-child { border-bottom: 0; }
+.insightCard:hover { transform: none; background: rgba(164,237,193,.025); }
+.insightCard h3 { color: #e5ede6; font-size: 12.5px; font-weight: 620; line-height: 1.45; }
+.insightCard p { font-size: 11px; line-height: 1.6; }
+.recommendation { padding: 10px 11px; background: #0d1310; border: 1px solid var(--converge-border); border-radius: 6px; }
+.sideColumn { gap: 11px; }
+.sidePanel { padding: 15px; background: var(--converge-panel); border: 1px solid var(--converge-border); border-radius: 8px; box-shadow: none; }
+.sidePanelHeading { padding-bottom: 11px; }
+.sidePanelIcon { width: 28px; height: 28px; border-radius: 6px; }
+.privacyPanel { background: rgba(164,237,193,.035); border-color: var(--converge-border); border-radius: 7px; }
+.privacyPanel strong { color: #c7e5cf; }
+.privacyPanel p { color: #a0ada3; }
+.footer { padding-bottom: 20px; color: #909d93; font-size: 10px; }
+.errorPanel { background: rgba(241,198,168,.07); border-color: rgba(241,198,168,.18); color: #f1c6a8; border-radius: 7px; box-shadow: none; }
+.loadingPanel { background: var(--converge-panel); border-color: var(--converge-border); border-radius: 8px; box-shadow: none; }
+.taskNotice { background: rgba(164,237,193,.055); border-color: rgba(164,237,193,.15); border-radius: 7px; color: #c1e8ce; }
+.draftTaskButton { background: transparent; border-color: var(--converge-border); border-radius: 6px; color: #bde7c9; font-size: 10.5px; font-weight: 600; }
+.draftTaskButton:hover { background: rgba(164,237,193,.05); border-color: rgba(164,237,193,.22); }
+.taskDraftForm { background: var(--converge-panel); border-color: var(--converge-border); border-radius: 8px; }
+.taskDraftHeading strong { color: #e0e9e2; }
+.taskDraftHeading span, .taskDraftForm label > span { color: #9ba89e; }
+.taskDraftForm label { color: #c0cbc2; font-size: 10.5px; }
+.taskDraftForm input, .taskDraftForm textarea, .taskDraftForm select { background: #0d1310; border-color: var(--converge-border); border-radius: 6px; color: #edf2ee; font-family: var(--font-ui, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11.5px; }
+.taskDraftForm input:focus, .taskDraftForm textarea:focus, .taskDraftForm select:focus { border-color: rgba(164,237,193,.45); box-shadow: none; }
+.cancelDraftButton { background: transparent; border-color: var(--converge-border); color: #c2cec4; border-radius: 6px; }
+.confirmTaskButton { border-radius: 6px; background: var(--converge-accent); color: #102219; font-weight: 600; border-color: transparent; }
+.confirmTaskButton:hover:not(:disabled) { background: #baf1cb; }
+@media (max-width: 980px) {
+  .metricsGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .metricCard:nth-child(2) { border-right: 0; }
+  .metricCard:nth-child(-n+2) { border-bottom: 1px solid var(--converge-border); }
+}
+@media (max-width: 640px) {
+  .hero { padding: 23px 14px 17px; }
+  .hero h1 { font-size: 28px; }
+  .heroCopy { font-size: 11.5px; }
+  .metricsGrid, .analysisGrid { padding-left: 14px; padding-right: 14px; }
+  .metricsGrid { gap: 0; }
+  .metricCard { padding: 12px; }
+  .metricValue { font-size: 25px; }
+  .insightCard { padding: 13px; }
+  .sidePanel { padding: 13px; }
+  .taskDraftFields { grid-template-columns: minmax(0,1fr); }
+  .taskDraftActions { align-items: stretch; }
+}
