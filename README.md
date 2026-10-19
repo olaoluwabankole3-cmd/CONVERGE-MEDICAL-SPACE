@@ -47,6 +47,8 @@ Run these migrations in order in the intended Supabase project's SQL Editor. Ver
 8. `supabase/migrations/202610180005_human_approved_operations_followups.sql` — adds a role-checked, service-role-only transaction that creates a staff-approved operational follow-up task and its audit event together.
 9. `supabase/migrations/202610180006_assign_human_approved_followups.sql` — adds optional same-hospital staff assignment for analyst-created follow-up tasks, with membership validation and assignment audit events in the same transaction.
 10. `supabase/migrations/202610180007_notifications_and_assigned_work.sql` — adds private in-app notifications for task assignment/status changes and a transactional status update for work assigned to the signed-in user.
+11. `supabase/migrations/202610190001_lock_down_membership_helper_execution.sql` — removes anonymous/public execution of the `SECURITY DEFINER` hospital-membership helper functions while preserving execution required by authenticated RLS policies.
+12. `supabase/migrations/202610190002_atomic_audit_for_direct_changes.sql` — writes audit records atomically for authenticated browser-side work-item and patient-reference changes, and removes direct authenticated/anonymous audit-event insert privileges.
 
 Apply these migrations in order on a fresh database. For an existing database, first verify which migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. Migration 7 is required by the patient/hospital request APIs and migration 8 is required to create follow-up tasks from the operations analyst, and migration 9 adds optional staff assignment. Apply applicable migrations once, in order. Run each applicable migration once in the intended Supabase project before using its workflow. The public service directory and new pages are committed to GitHub, but deployment, database RPC behaviour, authentication flows, and tenant isolation still require live verification. Use synthetic data only until that verification and the hospital's security review are complete.
 
@@ -58,6 +60,10 @@ npm run dev
 ```
 
 Create `.env.local` with the two public environment variables. Do not commit it.
+
+## Database authorization tests
+
+The repository now includes a local Supabase configuration and synthetic tenant-isolation tests under `supabase/tests/tenant_isolation.test.sql`. GitHub Actions runs `supabase test db` against a fresh local database, including cross-hospital read/write denial, audit-actor checks, audit-trigger checks, and privilege checks. A passing CI run is required evidence, but it does not replace authenticated end-to-end testing and a security review of the target hospital's actual Supabase project.
 
 ## Safety boundary
 
