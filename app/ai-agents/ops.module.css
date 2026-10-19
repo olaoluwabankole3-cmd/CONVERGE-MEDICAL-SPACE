@@ -302,3 +302,79 @@
   .taskDraftActions { align-items: stretch; }
 }
 @media (prefers-reduced-motion: reduce) { .insightCard { transition: none; } }
+
+
+/* Final product pass — align operations analyst with the shared workspace */
+.page { background: var(--converge-bg, #0c1210); color: var(--converge-text, #edf2ee); }
+.header { background: #101714; border-bottom-color: var(--converge-border, rgba(207,228,211,.12)); backdrop-filter: none; }
+.brandMark { border-radius: 8px; box-shadow: none; }
+.hero { padding-top: 30px; padding-bottom: 22px; gap: 20px; }
+.hero h1 { font-size: clamp(28px, 2.3vw, 34px); font-weight: 650; letter-spacing: -.045em; }
+.heroCopy { font-size: 12px; line-height: 1.65; }
+.modeBadge { border-radius: 6px; box-shadow: none; font-weight: 650; }
+.refreshButton { min-height: 36px; border-radius: 7px; box-shadow: none; font-weight: 650; }
+.refreshButton:hover:not(:disabled) { transform: none; }
+.metricsGrid {
+  gap: 0; border: 1px solid var(--converge-border); border-radius: 10px;
+  overflow: hidden; background: var(--converge-panel); margin-bottom: 22px;
+}
+.metricCard {
+  padding: 16px 18px; background: transparent; border: 0;
+  border-right: 1px solid var(--converge-border); border-radius: 0; box-shadow: none;
+}
+.metricCard:last-child { border-right: 0; }
+.metricIcon { border-radius: 7px; }
+.metricValue { font-size: 28px; font-weight: 620; letter-spacing: -.045em; }
+.analysisGrid { gap: 20px; }
+.sectionHeading h2 { font-size: 18px; font-weight: 640; letter-spacing: -.03em; }
+.readOnlyTag { border-radius: 6px; font-weight: 600; }
+.insightList { gap: 0; border: 1px solid var(--converge-border); border-radius: 10px; background: var(--converge-panel); overflow: hidden; }
+.insightCard {
+  padding: 17px 18px; background: transparent; border: 0; border-bottom: 1px solid var(--converge-border);
+  border-radius: 0; box-shadow: none; transition: background .15s ease;
+}
+.insightCard:last-child { border-bottom: 0; }
+.insightCard:hover { transform: none; background: rgba(164,237,193,.025); }
+.insightCard h3 { font-size: 13px; font-weight: 620; }
+.recommendation { border: 1px solid var(--converge-border); border-radius: 7px; padding: 11px 12px; background: #0d1511; }
+.sideColumn { gap: 12px; }
+.sidePanel { padding: 16px; background: var(--converge-panel); border: 1px solid var(--converge-border); border-radius: 10px; box-shadow: none; }
+.sidePanelHeading { padding-bottom: 12px; }
+.sidePanelIcon { border-radius: 7px; }
+.readOnlyTag, .priorityBadge { text-transform: none; }
+.privacyPanel { background: rgba(164,237,193,.045); border-color: var(--converge-border); border-radius: 9px; color: #a4edc1; }
+.privacyPanel strong { color: #c7e5cf; }
+.privacyPanel p { color: #9ca99f; }
+.footer { padding-bottom: 20px; font-size: 10px; }
+.errorPanel { background: rgba(241,198,168,.07); border-color: rgba(241,198,168,.19); color: #f1c6a8; border-radius: 8px; box-shadow: none; }
+.errorPanel p { color: #c3a296; }
+.loadingPanel { background: var(--converge-panel); border-color: var(--converge-border); border-radius: 10px; box-shadow: none; }
+.taskNotice { background: rgba(164,237,193,.06); border-color: rgba(164,237,193,.16); border-radius: 8px; color: #c1e8ce; }
+.taskNotice button { color: #a4edc1; }
+.draftTaskButton { background: transparent; border-color: var(--converge-border); border-radius: 7px; color: #bde7c9; font-weight: 650; }
+.draftTaskButton:hover { background: rgba(164,237,193,.06); border-color: rgba(164,237,193,.25); }
+.taskDraftForm { background: var(--converge-panel); border-color: var(--converge-border); border-radius: 9px; }
+.taskDraftHeading strong { color: #d9e8dc; }
+.taskDraftHeading span, .taskDraftForm label > span { color: #98a79c; }
+.taskDraftForm label { color: #c0cbc2; font-size: 10px; }
+.taskDraftForm input, .taskDraftForm textarea, .taskDraftForm select {
+  background: #0d1511; border-color: var(--converge-border); border-radius: 7px;
+  color: #edf2ee; font-family: var(--font-ui, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px;
+}
+.taskDraftForm input:focus, .taskDraftForm textarea:focus, .taskDraftForm select:focus { border-color: rgba(164,237,193,.45); box-shadow: none; }
+.cancelDraftButton { background: transparent; border-color: var(--converge-border); color: #c2cec4; border-radius: 7px; }
+.cancelDraftButton:hover { background: rgba(255,255,255,.035); }
+.confirmTaskButton { border-radius: 7px; background: var(--converge-accent); color: #102219; font-weight: 650; border-color: transparent; }
+.confirmTaskButton:hover:not(:disabled) { background: #baf1cb; }
+@media (max-width: 980px) {
+  .metricsGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .metricCard:nth-child(2) { border-right: 0; }
+  .metricCard:nth-child(-n+2) { border-bottom: 1px solid var(--converge-border); }
+}
+@media (max-width: 640px) {
+  .hero { padding-top: 24px; }
+  .analysisGrid { padding-bottom: 24px; }
+  .sectionHeading h2 { font-size: 17px; }
+  .insightCard { padding: 15px 14px; }
+  .sidePanel { padding: 14px; }
+}
