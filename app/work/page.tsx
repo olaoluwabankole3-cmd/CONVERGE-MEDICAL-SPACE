@@ -118,13 +118,9 @@ export default function WorkPage() {
         patient_record_id: newPatientRecordId || null, due_at: newDueAt ? new Date(newDueAt).toISOString() : null, created_by: userId
       }).select("id,reference_code,title,summary,item_type,priority,status,owner_id,external_reference,due_at,patient_record_id,created_at,updated_at").single();
       if (insertError) throw insertError;
-      const { error: auditError } = await supabase.from("audit_events").insert({
-        hospital_id: hospitalId, actor_id: userId, entity_type: "work_item", entity_id: data.id,
-        action: "work_item_created", details: { reference_code: reference, item_type: type, priority: newPriority, status: newStatus }
-      });
       setItems(current => [data as Row, ...current]);
       setShowCreate(false); setNewReference(""); setNewTitle(""); setNewSummary(""); setNewExternalReference(""); setNewPatientRecordId(""); setNewPriority("medium"); setNewStatus("open"); setNewDueAt("");
-      setNotice(auditError ? "Record created. The audit event could not be recorded, so please notify your administrator." : "Operational record created.");
+      setNotice("Operational record created. The change is recorded by the database audit trigger.");
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to create this record. Check that the reference is unique within your hospital."); }
     finally { setSaving(false); }
   }
@@ -135,12 +131,8 @@ export default function WorkPage() {
     try {
       const { data, error: updateError } = await supabase.from("work_items").update({ status: nextStatus }).eq("id", item.id).eq("hospital_id", hospitalId).select("id,status,updated_at").single();
       if (updateError) throw updateError;
-      const { error: auditError } = await supabase.from("audit_events").insert({
-        hospital_id: hospitalId, actor_id: userId, entity_type: "work_item", entity_id: item.id,
-        action: "work_item_status_changed", details: { reference_code: item.reference_code, previous_status: item.status, status: nextStatus }
-      });
       setItems(current => current.map(row => row.id === item.id ? { ...row, status: data.status as WorkStatus, updated_at: data.updated_at } : row));
-      setNotice(auditError ? "Status updated, but the audit event could not be recorded. Please notify your administrator." : "Record status updated.");
+      setNotice("Record status updated. The change is recorded by the database audit trigger.");
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to update this record."); }
     finally { setChangingId(""); }
   }
