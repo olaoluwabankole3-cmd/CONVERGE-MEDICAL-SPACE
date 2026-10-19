@@ -1,6 +1,6 @@
 begin;
 
-select plan(28);
+select plan(33);
 
 -- Deterministic synthetic users/hospitals. Entire test rolls back.
 insert into auth.users (
@@ -20,7 +20,9 @@ values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Synthetic Hospital A', 'ops-a@example.invalid', 'active',
    '11111111-1111-4111-8111-111111111111'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Synthetic Hospital B', 'ops-b@example.invalid', 'active',
-   '22222222-2222-4222-8222-222222222222')
+   '22222222-2222-4222-8222-222222222222'),
+  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'Synthetic Pending Hospital', 'ops-pending@example.invalid', 'pending',
+   '11111111-1111-4111-8111-111111111111')
 on conflict (id) do nothing;
 
 insert into public.hospital_memberships (hospital_id, user_id, role)
@@ -249,6 +251,41 @@ select ok(
 select ok(
   has_function_privilege('authenticated', 'public.has_hospital_role(uuid,public.hospital_member_role[])', 'execute'),
   'Authenticated role can execute role helper needed by RLS'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.decide_hospital_registration(uuid,uuid,text,text)', 'execute'),
+  'Authenticated users cannot directly invoke platform hospital approval'
+);
+select ok(
+  not has_function_privilege('anon', 'public.decide_hospital_registration(uuid,uuid,text,text)', 'execute'),
+  'Anonymous users cannot invoke platform hospital approval'
+);
+select ok(
+  has_function_privilege('service_role', 'public.decide_hospital_registration(uuid,uuid,text,text)', 'execute'),
+  'Only the trusted server role can invoke platform hospital approval'
+);
+
+reset role;
+set local role service_role;
+select public.decide_hospital_registration(
+  'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  '11111111-1111-4111-8111-111111111111',
+  'active',
+  null
+);
+reset role;
+select is(
+  (select status::text from public.hospitals where id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'),
+  'active',
+  'Hospital registration is approved by the atomic decision function'
+);
+select is(
+  (select count(*)::integer from public.audit_events
+    where hospital_id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+      and actor_id = '11111111-1111-4111-8111-111111111111'
+      and action = 'hospital_approved'),
+  1,
+  'Hospital approval creates its audit event in the same transaction'
 );
 
 reset role;
