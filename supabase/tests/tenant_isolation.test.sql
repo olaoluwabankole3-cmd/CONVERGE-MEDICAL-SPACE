@@ -1,6 +1,6 @@
 begin;
 
-select plan(22);
+select plan(27);
 
 -- Deterministic synthetic users/hospitals. Entire test rolls back.
 insert into auth.users (
@@ -107,6 +107,78 @@ select is(
   0,
   'Hospital A member cannot read Hospital B audit history'
 );
+
+-- A logged-in browser mutation and its audit event must commit atomically.
+insert into public.work_items
+  (id, hospital_id, reference_code, title, item_type, priority, status, created_by)
+values
+  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'SEC-A-WORK-002', 'Synthetic audit trigger test', 'task', 'low', 'open',
+   '11111111-1111-4111-8111-111111111111');
+
+select is(
+  (select count(*)::integer from public.audit_events
+    where hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and actor_id = auth.uid()
+      and entity_type = 'work_item'
+      and entity_id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+      and action = 'work_item_created'),
+  1,
+  'Work item creation writes its audit event in the same transaction'
+);
+
+update public.work_items
+  set status = 'needs_review'
+  where id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    and hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select is(
+  (select count(*)::integer from public.audit_events
+    where hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and actor_id = auth.uid()
+      and entity_type = 'work_item'
+      and entity_id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+      and action = 'work_item_status_changed'),
+  1,
+  'Work item status change is audit logged atomically'
+);
+
+insert into public.patient_records
+  (id, hospital_id, reference_code, care_area, status, created_by)
+values
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'SEC-A-PAT-002', 'Synthetic', 'active',
+   '11111111-1111-4111-8111-111111111111');
+
+select is(
+  (select count(*)::integer from public.audit_events
+    where hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and actor_id = auth.uid()
+      and entity_type = 'patient_reference'
+      and entity_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+      and action = 'patient_reference_created'),
+  1,
+  'Patient reference creation writes its audit event in the same transaction'
+);
+
+update public.patient_records
+  set status = 'archived'
+  where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+    and hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+select is(
+  (select count(*)::integer from public.audit_events
+    where hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and actor_id = auth.uid()
+      and entity_type = 'patient_reference'
+      and entity_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+      and action = 'patient_reference_archived'),
+  1,
+  'Patient reference status change is audit logged atomically'
+);
+
 select is(
   (with changed as (
     update public.work_items set title = 'Cross-tenant mutation attempt'
@@ -133,11 +205,15 @@ select throws_ok(
       '22222222-2222-4222-8222-222222222222', 'test', 'SEC-FORGE', 'forged_actor', '{}'::jsonb)$$,
   '42501',
   null,
-  'Audit event cannot be attributed to a different actor'
+  'Browser cannot directly insert audit events'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.user_notifications', 'select'),
   'Authenticated users have no direct table access to notifications'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.audit_events', 'insert'),
+  'Authenticated users cannot directly insert audit events'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.audit_events', 'update'),
