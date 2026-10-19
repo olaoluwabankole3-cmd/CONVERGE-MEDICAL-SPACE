@@ -75,14 +75,10 @@ export default function PatientReferencesPage() {
         created_by: user.id, status: "active",
       }).select("id,hospital_id,reference_code,external_reference,care_area,status,created_by,created_at,updated_at").single();
       if (insertError) throw insertError;
-      const { error: auditError } = await supabase.from("audit_events").insert({
-        hospital_id: hospitalId, actor_id: user.id, entity_type: "patient_reference",
-        entity_id: data.id, action: "patient_reference_created", details: { reference_code: data.reference_code, care_area: data.care_area },
-      });
       const record = data as PatientRecord;
       setRecords(current => [record, ...current]); setSelected(record); setFilter("all"); setSearch("");
       setReference(""); setExternalReference(""); setCareArea(""); setShowCreate(false);
-      setNotice(auditError ? "Patient reference saved, but the audit event could not be recorded." : `Reference ${record.reference_code} created.`);
+      setNotice(`Reference ${record.reference_code} created. The change is recorded by the database audit trigger.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to create patient reference. The reference may already exist in this hospital.");
     } finally { setSaving(false); }
@@ -99,15 +95,10 @@ export default function PatientReferencesPage() {
         .eq("id", record.id).eq("hospital_id", hospitalId)
         .select("id,hospital_id,reference_code,external_reference,care_area,status,created_by,created_at,updated_at").single();
       if (updateError) throw updateError;
-      const { error: auditError } = await supabase.from("audit_events").insert({
-        hospital_id: hospitalId, actor_id: user.id, entity_type: "patient_reference", entity_id: record.id,
-        action: status === "archived" ? "patient_reference_archived" : "patient_reference_reactivated",
-        details: { reference_code: record.reference_code },
-      });
       const updated = data as PatientRecord;
       setRecords(current => current.map(item => item.id === updated.id ? updated : item));
       setSelected(updated);
-      setNotice(auditError ? "Status updated, but the audit event could not be recorded." : `${updated.reference_code} marked ${status}.`);
+      setNotice(`${updated.reference_code} marked ${status}. The change is recorded by the database audit trigger.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to update this patient reference.");
     } finally { setSaving(false); }
