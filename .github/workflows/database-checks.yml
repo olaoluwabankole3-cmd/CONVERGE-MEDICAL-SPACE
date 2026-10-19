@@ -1,0 +1,24 @@
+name: Database checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start --exclude studio,inbucket,storage-api,realtime,edge-runtime,logflare,vector,analytics
+      - run: supabase test db
+      - if: always()
+        run: supabase stop --no-backup
