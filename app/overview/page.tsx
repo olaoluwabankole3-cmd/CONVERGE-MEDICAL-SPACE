@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, AlertCircle, ArrowRight, Bell, CalendarDays, CheckCircle2, ChevronDown, ClipboardCheck,
-  Clock3, FileClock, LayoutDashboard, LogOut, Search, Settings2, ShieldCheck,
+  Clock3, FileClock, LayoutDashboard, LogOut, Search, Settings2, ShieldCheck, ChevronLeft, ChevronRight,
   Stethoscope, Users, WandSparkles, X, ClipboardList, RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -39,6 +39,7 @@ function mapItem(item: DbWorkItem): WorkItem {
 
 export default function Home() {
   const router = useRouter();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -287,36 +288,36 @@ export default function Home() {
   const activeCount = items.filter(i => !["resolved", "closed"].includes(i.status)).length;
 
   return (
-    <main className="app-shell">
+    <main className={sidebarCollapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><Activity size={21} strokeWidth={2.4} /></div><div><strong>converge</strong><span>MEDICAL INTELLIGENCE</span></div></div>
         <div className="workspace-switcher"><div className="hospital-mark"><Stethoscope size={18} /></div><div className="workspace-copy"><strong>{hospital?.name ?? "Hospital workspace"}</strong><span>{hospital?.status === "active" ? `${hospital.city ? hospital.city + ", " : ""}${hospital.country}` : hospital?.status === "pending" ? "Awaiting approval" : "No workspace connected"}</span></div><ChevronDown size={16} className="muted-icon" /></div>
         <div className="nav-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
           <a className="nav-item active" href="/overview"><LayoutDashboard size={18} /><span>Overview</span><i className="active-dot" /></a>
-          <a className="nav-item" href="/work?type=access_case"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
-          <a className="nav-item" href="/patients"><Users size={18} /><span>Patient references</span></a>
-          <a className="nav-item" href="/requests"><ClipboardList size={18} /><span>Patient requests</span></a>
-          <a className="nav-item" href="/services"><Stethoscope size={18} /><span>Hospital services</span></a>
-          <a className="nav-item" href="/appointments"><CalendarDays size={18} /><span>Appointments</span></a>
-          <a className="nav-item" href="/work?type=follow_up"><CheckCircle2 size={18} /><span>Follow-ups</span></a>
-          <a className="nav-item" href="/work?type=task"><ClipboardList size={18} /><span>Tasks</span></a>
-          <a className="nav-item" href="/my-work"><ClipboardCheck size={18} /><span>My assigned work</span></a>
-          <a className="nav-item" href="/notifications"><Bell size={18} /><span>Notifications</span></a>
-          <a className="nav-item" href="/work?type=exception"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
+          <a className="nav-item" aria-label="Access cases" title="Access cases" href="/work?type=access_case"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
+          <a className="nav-item" aria-label="Patient references" title="Patient references" href="/patients"><Users size={18} /><span>Patient references</span></a>
+          <a className="nav-item" aria-label="Patient requests" title="Patient requests" href="/requests"><ClipboardList size={18} /><span>Patient requests</span></a>
+          <a className="nav-item" aria-label="Hospital services" title="Hospital services" href="/services"><Stethoscope size={18} /><span>Hospital services</span></a>
+          <a className="nav-item" aria-label="Appointments" title="Appointments" href="/appointments"><CalendarDays size={18} /><span>Appointments</span></a>
+          <a className="nav-item" aria-label="Follow-ups" title="Follow-ups" href="/work?type=follow_up"><CheckCircle2 size={18} /><span>Follow-ups</span></a>
+          <a className="nav-item" aria-label="Tasks" title="Tasks" href="/work?type=task"><ClipboardList size={18} /><span>Tasks</span></a>
+          <a className="nav-item" aria-label="My assigned work" title="My assigned work" href="/my-work"><ClipboardCheck size={18} /><span>My assigned work</span></a>
+          <a className="nav-item" aria-label="Notifications" title="Notifications" href="/notifications"><Bell size={18} /><span>Notifications</span></a>
+          <a className="nav-item" aria-label="Exceptions" title="Exceptions" href="/work?type=exception"><AlertCircle size={18} /><span>Exceptions</span><b className="nav-count warning">{items.filter(i => i.item_type === "exception" && !["resolved", "closed"].includes(i.status)).length}</b></a>
         </nav>
         <div className="nav-label">GOVERNANCE</div>
         <nav className="nav-list" aria-label="Governance navigation">
           <a className="nav-item" href="/ai-agents"><WandSparkles size={18} /><span>AI agents</span></a>
-          <a className="nav-item" href="/admin/approvals"><ShieldCheck size={18} /><span>Approvals</span></a>
-          <a className="nav-item" href="/audit"><FileClock size={18} /><span>Audit history</span></a>
-          <a className="nav-item" href="/reports"><Activity size={18} /><span>Reports & analytics</span></a>
+          <a className="nav-item" aria-label="Approvals" title="Approvals" href="/admin/approvals"><ShieldCheck size={18} /><span>Approvals</span></a>
+          <a className="nav-item" aria-label="Audit history" title="Audit history" href="/audit"><FileClock size={18} /><span>Audit history</span></a>
+          <a className="nav-item" aria-label="Reports & analytics" title="Reports & analytics" href="/reports"><Activity size={18} /><span>Reports & analytics</span></a>
         </nav>
-        <div className="sidebar-bottom"><a className="nav-item" href="/team"><Settings2 size={18} /><span>Team & access</span></a><a className="nav-item" href="/settings"><Stethoscope size={18} /><span>Hospital settings</span></a><div className="profile"><div className="avatar">{(userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase()}</div><div className="profile-copy"><strong>{userEmail || "Signed-in user"}</strong><span>{role.replace("_", " ")} · workspace access</span></div><button className="icon-button subtle" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button></div></div>
+        <div className="sidebar-bottom"><a className="nav-item" aria-label="Team & access" title="Team & access" href="/team"><Settings2 size={18} /><span>Team & access</span></a><a className="nav-item" aria-label="Hospital settings" title="Hospital settings" href="/settings"><Stethoscope size={18} /><span>Hospital settings</span></a><div className="profile"><div className="avatar">{(userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase()}</div><div className="profile-copy"><strong>{userEmail || "Signed-in user"}</strong><span>{role.replace("_", " ")} · workspace access</span></div><button className="icon-button subtle" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={15} /></button></div></div>
       </aside>
 
       <section className="main-area">
-        <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div><div className="topbar-actions"><div className="demo-badge"><span /> {hospital?.status === "active" ? "Live workspace" : "Setup required"}</div><label className="search-box"><Search size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search work items" aria-label="Search work items" /></label><button className="dashboard-signin" onClick={() => void loadWorkspace()} disabled={loading}><RefreshCw size={14} /> Refresh</button></div></header>
+        <header className="topbar"><div className="topbar-leading"><button type="button" className="sidebar-toggle" onClick={() => setSidebarCollapsed((collapsed) => !collapsed)} aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"} aria-expanded={!sidebarCollapsed} title={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}><span className="sidebar-toggle-icon">{sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}</span></button><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div></div><div className="topbar-actions"><div className="demo-badge"><span /> {hospital?.status === "active" ? "Live workspace" : "Setup required"}</div><label className="search-box"><Search size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search work items" aria-label="Search work items" /></label><button className="dashboard-signin" onClick={() => void loadWorkspace()} disabled={loading}><RefreshCw size={14} /> Refresh</button></div></header>
         <div className="page-content">
           <div className="page-heading"><div><div className="eyebrow">{new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date()).toUpperCase()} <span className="eyebrow-line" /></div><h1>{hospital?.status === "active" ? "Your operations, at a glance." : "Set up your hospital workspace."}</h1><p>{hospital?.status === "active" ? "A live view of the operational work your team is coordinating." : "Complete the hospital approval process to begin managing operational work."}</p></div><button className="primary-button" onClick={() => setShowCreate(true)} disabled={!hospital || hospital.status !== "active"}><span>+</span> Create work item</button></div>
           {error && <div className="notice error-notice"><div className="notice-icon"><AlertCircle size={19} /></div><div><strong>Something needs attention</strong><p>{error}</p></div><button className="notice-dismiss" onClick={() => setError("")} aria-label="Dismiss error"><X size={16} /></button></div>}
