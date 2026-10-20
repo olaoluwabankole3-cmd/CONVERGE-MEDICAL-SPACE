@@ -95,7 +95,7 @@
   .main-area::after{left:calc(var(--sidebar-width) + 4px)}
   .sidebar-toggle{
     position:fixed;
-    left:calc(var(--sidebar-width) - 5px);
+    left:var(--sidebar-width);
     top:50%;
     margin:0;
     transform:translate(-50%,-50%);
