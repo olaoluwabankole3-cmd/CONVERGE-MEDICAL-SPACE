@@ -75,10 +75,15 @@
 }
 
 
-/* Minimal double-line sidebar divider: only two rules and an unboxed arrow. */
+/* Sidebar divider: exactly two full-height rules with a centred, unboxed arrow. */
 @media(min-width:981px){
-  .app-shell{--sidebar-width:250px}
+  /* Match the actual desktop sidebar widths in converge-brand.css. */
+  .app-shell{--sidebar-width:236px}
   .app-shell.sidebar-collapsed{--sidebar-width:78px}
+  .app-shell:not(.sidebar-collapsed) .sidebar{
+    width:var(--sidebar-width);
+    flex-basis:var(--sidebar-width);
+  }
   .main-area{position:relative}
   .main-area::before,
   .main-area::after{
@@ -102,13 +107,13 @@
     z-index:60;
     display:grid;
     place-items:center;
-    width:9px;
+    width:14px;
     height:22px;
     min-width:0;
     padding:0;
     border:0;
     border-radius:0;
-    color:#526d76;
+    color:#aebfc4;
     background:transparent;
     box-shadow:none;
     appearance:none;
@@ -116,14 +121,14 @@
   .sidebar-toggle-icon{
     display:grid;
     place-items:center;
-    width:9px;
+    width:14px;
     height:22px;
     background:transparent;
   }
-  .sidebar-toggle-icon svg{display:block;width:9px;height:9px;stroke-width:2.2}
-  .sidebar-toggle:hover{color:#137c79;background:transparent}
+  .sidebar-toggle-icon svg{display:block;width:14px;height:14px;stroke-width:2.4}
+  .sidebar-toggle:hover{color:#d3e0e1;background:transparent}
   .sidebar-toggle:focus-visible{outline:1px solid #7ba9a3;outline-offset:2px}
 }
 @media(min-width:981px) and (max-width:1200px){
-  .app-shell{--sidebar-width:220px}
+  .app-shell{--sidebar-width:218px}
 }
