@@ -294,7 +294,7 @@ export default function Home() {
         <div className="workspace-switcher"><div className="hospital-mark"><Stethoscope size={18} /></div><div className="workspace-copy"><strong>{hospital?.name ?? "Hospital workspace"}</strong><span>{hospital?.status === "active" ? `${hospital.city ? hospital.city + ", " : ""}${hospital.country}` : hospital?.status === "pending" ? "Awaiting approval" : "No workspace connected"}</span></div><ChevronDown size={16} className="muted-icon" /></div>
         <div className="nav-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
-          <a className="nav-item active" href="/overview"><LayoutDashboard size={18} /><span>Overview</span><i className="active-dot" /></a>
+          <a className="nav-item active" aria-label="Overview" title="Overview" href="/overview"><LayoutDashboard size={18} /><span>Overview</span><i className="active-dot" /></a>
           <a className="nav-item" aria-label="Access cases" title="Access cases" href="/work?type=access_case"><Users size={18} /><span>Access cases</span><b className="nav-count">{items.filter(i => i.item_type === "access_case" && !["resolved", "closed"].includes(i.status)).length}</b></a>
           <a className="nav-item" aria-label="Patient references" title="Patient references" href="/patients"><Users size={18} /><span>Patient references</span></a>
           <a className="nav-item" aria-label="Patient requests" title="Patient requests" href="/requests"><ClipboardList size={18} /><span>Patient requests</span></a>
@@ -308,7 +308,7 @@ export default function Home() {
         </nav>
         <div className="nav-label">GOVERNANCE</div>
         <nav className="nav-list" aria-label="Governance navigation">
-          <a className="nav-item" href="/ai-agents"><WandSparkles size={18} /><span>AI agents</span></a>
+          <a className="nav-item" aria-label="AI agents" title="AI agents" href="/ai-agents"><WandSparkles size={18} /><span>AI agents</span></a>
           <a className="nav-item" aria-label="Approvals" title="Approvals" href="/admin/approvals"><ShieldCheck size={18} /><span>Approvals</span></a>
           <a className="nav-item" aria-label="Audit history" title="Audit history" href="/audit"><FileClock size={18} /><span>Audit history</span></a>
           <a className="nav-item" aria-label="Reports & analytics" title="Reports & analytics" href="/reports"><Activity size={18} /><span>Reports & analytics</span></a>
