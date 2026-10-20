@@ -75,7 +75,7 @@
 }
 
 
-/* Full-height double divider with a centred collapse control */
+/* Full-height double divider with a viewport-centred collapse control */
 @media(min-width:981px){
   .app-shell{--sidebar-width:250px}
   .app-shell.sidebar-collapsed{--sidebar-width:78px}
@@ -96,7 +96,8 @@
   .sidebar-toggle{
     position:fixed;
     left:calc(var(--sidebar-width) - 19px);
-    top:50vh;
+    top:50%;
+    margin-top:0;
     transform:translateY(-50%);
     z-index:60;
     width:38px;
