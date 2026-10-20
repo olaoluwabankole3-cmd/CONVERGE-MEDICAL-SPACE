@@ -127,6 +127,7 @@
   }
   .sidebar-toggle-icon svg{display:block;width:22px;height:22px;stroke-width:2.8}
   .sidebar-toggle:hover{color:#d3e0e1;background:transparent}
+  .sidebar-toggle:active:not(:disabled){transform:translate(-50%,-50%)}
   .sidebar-toggle:focus-visible{outline:1px solid #7ba9a3;outline-offset:2px}
 }
 @media(min-width:981px) and (max-width:1200px){
