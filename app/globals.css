@@ -75,21 +75,24 @@
 }
 
 
-/* Sidebar toggle anchored to the workspace divider */
+/* Split-handle control anchored to the workspace divider */
 @media(min-width:981px){
   .main-area{position:relative}
   .topbar-leading{gap:0}
   .sidebar-toggle{
     position:absolute;
-    left:-15px;
-    top:20px;
+    left:-12px;
+    top:16px;
     z-index:50;
-    width:30px;
-    height:30px;
-    flex:0 0 30px;
-    border-radius:50%;
+    width:24px;
+    height:38px;
+    flex:0 0 24px;
+    border-radius:7px;
     background:#fff;
     border:1px solid #d6e0e4;
-    box-shadow:0 2px 7px #122c3b20;
+    box-shadow:0 2px 6px #122c3b16;
   }
+  .sidebar-toggle-grip{display:flex;align-items:center;justify-content:center;gap:4px;height:100%;width:100%}
+  .sidebar-toggle-grip i{display:block;width:1.5px;height:17px;border-radius:2px;background:#82939b;transition:background .15s ease,height .15s ease}
+  .sidebar-toggle:hover .sidebar-toggle-grip i{background:#137c79;height:20px}
 }
