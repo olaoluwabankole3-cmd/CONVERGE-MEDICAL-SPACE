@@ -73,3 +73,23 @@
 @media(max-width:980px){
   .sidebar-toggle{display:none}
 }
+
+
+/* Sidebar toggle anchored to the workspace divider */
+@media(min-width:981px){
+  .main-area{position:relative}
+  .topbar-leading{gap:0}
+  .sidebar-toggle{
+    position:absolute;
+    left:-15px;
+    top:20px;
+    z-index:50;
+    width:30px;
+    height:30px;
+    flex:0 0 30px;
+    border-radius:50%;
+    background:#fff;
+    border:1px solid #d6e0e4;
+    box-shadow:0 2px 7px #122c3b20;
+  }
+}
