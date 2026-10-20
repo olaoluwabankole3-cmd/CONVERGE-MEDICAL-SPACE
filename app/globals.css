@@ -75,24 +75,40 @@
 }
 
 
-/* Split-handle control anchored to the workspace divider */
+/* Double-line divider with a centred collapse control */
 @media(min-width:981px){
   .main-area{position:relative}
   .topbar-leading{gap:0}
+  .main-area::before,
+  .main-area::after{
+    content:"";
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:1px;
+    background:#dbe4e8;
+    pointer-events:none;
+    z-index:1;
+  }
+  .main-area::before{left:-10px}
+  .main-area::after{left:10px}
   .sidebar-toggle{
     position:absolute;
-    left:-12px;
-    top:16px;
+    left:-20px;
+    top:50%;
+    transform:translateY(-50%);
     z-index:50;
-    width:24px;
-    height:38px;
-    flex:0 0 24px;
-    border-radius:7px;
-    background:#fff;
-    border:1px solid #d6e0e4;
-    box-shadow:0 2px 6px #122c3b16;
+    width:40px;
+    height:44px;
+    flex:0 0 40px;
+    border:0;
+    border-radius:9px;
+    padding:0;
+    color:#536d76;
+    background:transparent;
+    box-shadow:none;
   }
-  .sidebar-toggle-grip{display:flex;align-items:center;justify-content:center;gap:4px;height:100%;width:100%}
-  .sidebar-toggle-grip i{display:block;width:1.5px;height:17px;border-radius:2px;background:#82939b;transition:background .15s ease,height .15s ease}
-  .sidebar-toggle:hover .sidebar-toggle-grip i{background:#137c79;height:20px}
+  .sidebar-toggle-icon{display:grid;place-items:center;width:100%;height:100%}
+  .sidebar-toggle:hover{background:#edf6f4;color:#137c79}
+  .sidebar-toggle:focus-visible{outline:2px solid #58aaa0;outline-offset:-2px}
 }
