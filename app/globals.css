@@ -53,7 +53,7 @@
 .sidebar-toggle:focus-visible{outline:2px solid #58aaa0;outline-offset:2px}
 .sidebar-toggle-icon{display:grid;place-items:center}
 @media(min-width:981px){
-  .app-shell .sidebar{transition:width .2s ease,flex-basis .2s ease,padding .2s ease}
+  .app-shell .sidebar{transition:width .2s ease,flex-basis .2s ease,padding .2s ease;border-right:0}
   .app-shell.sidebar-collapsed .sidebar{width:78px;flex:0 0 78px;padding:25px 9px 15px}
   .app-shell.sidebar-collapsed .brand{justify-content:center;padding:0 0 29px}
   .app-shell.sidebar-collapsed .brand>div:last-child,
