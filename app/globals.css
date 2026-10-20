@@ -75,61 +75,91 @@
 }
 
 
-/* Sidebar divider: exactly two full-height rules with a centred, unboxed arrow. */
-@media(min-width:981px){
-  /* Match the actual desktop sidebar widths in converge-brand.css. */
-  .app-shell{--sidebar-width:236px}
-  .app-shell.sidebar-collapsed{--sidebar-width:78px}
-  .app-shell:not(.sidebar-collapsed) .sidebar{
-    width:var(--sidebar-width);
-    flex-basis:var(--sidebar-width);
+/* Sidebar divider: one width source controls the sidebar, both lines and the arrow. */
+@media (min-width: 981px) {
+  .app-shell {
+    --sidebar-width: 236px;
+    --divider-half-gap: 9px;
   }
-  .main-area{position:relative}
+  .app-shell.sidebar-collapsed {
+    --sidebar-width: 78px;
+  }
+  .app-shell > .sidebar {
+    box-sizing: border-box;
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    flex: 0 0 var(--sidebar-width);
+    border-right: 0 !important;
+  }
+  .main-area {
+    position: relative;
+    min-width: 0;
+  }
   .main-area::before,
-  .main-area::after{
-    content:"";
-    position:fixed;
-    top:0;
-    bottom:0;
-    width:1px;
-    background:#aebfc4;
-    pointer-events:none;
-    z-index:40;
+  .main-area::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #aebfc4;
+    pointer-events: none;
+    z-index: 40;
   }
-  .main-area::before{left:calc(var(--sidebar-width) - 9px)}
-  .main-area::after{left:calc(var(--sidebar-width) + 9px)}
-  .sidebar-toggle{
-    position:fixed;
-    left:var(--sidebar-width);
-    top:50%;
-    margin:0;
-    transform:translate(-50%,-50%);
-    z-index:60;
-    display:grid;
-    place-items:center;
-    width:24px;
-    height:28px;
-    min-width:0;
-    padding:0;
-    border:0;
-    border-radius:0;
-    color:#aebfc4;
-    background:transparent;
-    box-shadow:none;
-    appearance:none;
+  .main-area::before {
+    left: calc(var(--sidebar-width) - var(--divider-half-gap));
   }
-  .sidebar-toggle-icon{
-    display:grid;
-    place-items:center;
-    width:24px;
-    height:28px;
-    background:transparent;
+  .main-area::after {
+    left: calc(var(--sidebar-width) + var(--divider-half-gap));
   }
-  .sidebar-toggle-icon svg{display:block;width:22px;height:22px;stroke-width:2.8}
-  .sidebar-toggle:hover{color:#d3e0e1;background:transparent}
-  .sidebar-toggle:active:not(:disabled){transform:translate(-50%,-50%)}
-  .sidebar-toggle:focus-visible{outline:1px solid #7ba9a3;outline-offset:2px}
+  .sidebar-toggle {
+    position: fixed;
+    left: var(--sidebar-width);
+    top: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 28px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    color: #aebfc4;
+    background: transparent;
+    box-shadow: none;
+    appearance: none;
+  }
+  .sidebar-toggle-icon {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 28px;
+    background: transparent;
+  }
+  .sidebar-toggle-icon svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    stroke-width: 2.8;
+  }
+  .sidebar-toggle:hover {
+    color: #d3e0e1;
+    background: transparent;
+  }
+  .sidebar-toggle:active:not(:disabled) {
+    transform: translate(-50%, -50%) !important;
+  }
+  .sidebar-toggle:focus-visible {
+    outline: 1px solid #7ba9a3;
+    outline-offset: 2px;
+  }
 }
-@media(min-width:981px) and (max-width:1200px){
-  .app-shell{--sidebar-width:218px}
+@media (min-width: 981px) and (max-width: 1200px) {
+  .app-shell {
+    --sidebar-width: 218px;
+  }
 }
