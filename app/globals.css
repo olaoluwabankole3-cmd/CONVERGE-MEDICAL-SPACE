@@ -96,8 +96,8 @@
     pointer-events:none;
     z-index:40;
   }
-  .main-area::before{left:calc(var(--sidebar-width) - 4px)}
-  .main-area::after{left:calc(var(--sidebar-width) + 4px)}
+  .main-area::before{left:calc(var(--sidebar-width) - 9px)}
+  .main-area::after{left:calc(var(--sidebar-width) + 9px)}
   .sidebar-toggle{
     position:fixed;
     left:var(--sidebar-width);
@@ -107,8 +107,8 @@
     z-index:60;
     display:grid;
     place-items:center;
-    width:14px;
-    height:22px;
+    width:24px;
+    height:28px;
     min-width:0;
     padding:0;
     border:0;
@@ -121,11 +121,11 @@
   .sidebar-toggle-icon{
     display:grid;
     place-items:center;
-    width:14px;
-    height:22px;
+    width:24px;
+    height:28px;
     background:transparent;
   }
-  .sidebar-toggle-icon svg{display:block;width:14px;height:14px;stroke-width:2.4}
+  .sidebar-toggle-icon svg{display:block;width:22px;height:22px;stroke-width:2.8}
   .sidebar-toggle:hover{color:#d3e0e1;background:transparent}
   .sidebar-toggle:focus-visible{outline:1px solid #7ba9a3;outline-offset:2px}
 }
