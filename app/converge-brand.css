@@ -1791,3 +1791,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
 }
 /* Keep overview focused on operational workload; audit lives on its dedicated page. */
 .activity-panel { display: none !important; }
+
+/* Keep the desktop collapse arrow at the exact same coordinates when pressed.
+   This stylesheet loads after globals.css, so override the global button:active rule here. */
+@media (min-width: 981px) {
+  .app-shell button.sidebar-toggle:active:not(:disabled) {
+    transform: translate(-50%, -50%) !important;
+  }
+}
