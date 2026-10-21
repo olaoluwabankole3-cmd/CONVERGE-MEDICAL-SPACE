@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="600" viewBox="0 0 1800 600" fill="none">
+  <title>Converge wordmark with inward-converging lines</title>
+  <desc>Bold deep-green CONVERGE wordmark. Tapered lines point inward toward a central focal point behind the word.</desc>
+  <g fill="#137C79">
+    <polygon points="250,43 278,43 652,202" />
+    <polygon points="610,28 638,28 799,202" />
+    <polygon points="890,22 910,22 900,202" />
+    <polygon points="1162,28 1190,28 1001,202" />
+    <polygon points="1522,43 1550,43 1148,202" />
+    <polygon points="52,177 52,203 360,230" />
+    <polygon points="52,397 52,423 360,370" />
+    <polygon points="1748,177 1748,203 1440,230" />
+    <polygon points="1748,397 1748,423 1440,370" />
+    <polygon points="250,557 278,557 652,398" />
+    <polygon points="610,572 638,572 799,398" />
+    <polygon points="890,578 910,578 900,398" />
+    <polygon points="1162,572 1190,572 1001,398" />
+    <polygon points="1522,557 1550,557 1148,398" />
+  </g>
+  <text x="900" y="359" text-anchor="middle" font-family="Inter Display, Inter, Arial, sans-serif" font-size="180" font-weight="750" letter-spacing="4" fill="#137C79">CONVERGE</text>
+</svg>
