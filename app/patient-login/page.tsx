@@ -67,7 +67,7 @@ export default function PatientLoginPage() {
   return (
     <main className="patient-auth-page">
       <section className="patient-auth-brand-panel">
-        <Link href="/care" className="care-brand"><span className="care-brand-mark"><Activity size={20} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/care" className="care-brand"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo" /></Link>
         <div className="patient-auth-story">
           <span className="care-eyebrow"><ShieldCheck size={14} /> PATIENT ACCESS</span>
           <h1>Your care requests, with a clearer next step.</h1>
