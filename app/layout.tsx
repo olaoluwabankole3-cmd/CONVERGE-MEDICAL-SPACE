@@ -6,7 +6,8 @@ import "./medical-landing.css";
 
 export const metadata: Metadata = {
   title: "Converge Medical Intelligence | Connected hospital operations",
-  description: "Coordinate hospital access, requests, appointments, follow-ups and operational work in one governed workspace."
+  description: "Coordinate hospital access, requests, appointments, follow-ups and operational work in one governed workspace.",
+  icons: { icon: "/converge-logo.svg", apple: "/converge-logo.svg" }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
