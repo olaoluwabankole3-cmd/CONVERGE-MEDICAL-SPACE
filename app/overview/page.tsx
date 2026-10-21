@@ -291,7 +291,7 @@ export default function Home() {
     <main className={sidebarCollapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
       <button type="button" className="sidebar-toggle" onClick={() => setSidebarCollapsed((collapsed) => !collapsed)} aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"} aria-expanded={!sidebarCollapsed} title={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}><span className="sidebar-toggle-icon" aria-hidden="true">{sidebarCollapsed ? <ChevronRight size={13} strokeWidth={2.5} /> : <ChevronLeft size={13} strokeWidth={2.5} />}</span></button>
       <aside className="sidebar">
-        <div className="brand"><div className="brand-mark"><Activity size={21} strokeWidth={2.4} /></div><div><strong>converge</strong><span>MEDICAL INTELLIGENCE</span></div></div>
+        <div className="brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo sidebar-converge-logo" /></div>
         <div className="workspace-switcher"><div className="hospital-mark"><Stethoscope size={18} /></div><div className="workspace-copy"><strong>{hospital?.name ?? "Hospital workspace"}</strong><span>{hospital?.status === "active" ? `${hospital.city ? hospital.city + ", " : ""}${hospital.country}` : hospital?.status === "pending" ? "Awaiting approval" : "No workspace connected"}</span></div><ChevronDown size={16} className="muted-icon" /></div>
         <div className="nav-label">WORKSPACE</div>
         <nav className="nav-list" aria-label="Main navigation">
