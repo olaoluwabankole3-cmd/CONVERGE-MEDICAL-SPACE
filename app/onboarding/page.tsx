@@ -100,7 +100,7 @@ export default function HospitalOnboardingPage() {
   return (
     <main className="onboarding-page">
       <header className="onboarding-topbar">
-        <Link href="/" className="auth-brand"><span className="auth-brand-mark"><Activity size={21} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className="auth-brand"><img src="/converge-logo.svg" alt="Converge" className="converge-logo auth-converge-logo" /></Link>
         <button className="onboarding-signout" onClick={signOut}><LogOut size={16} /> Sign out</button>
       </header>
       <div className="onboarding-content">
