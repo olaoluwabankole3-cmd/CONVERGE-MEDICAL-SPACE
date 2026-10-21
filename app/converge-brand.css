@@ -1799,3 +1799,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
     transform: translate(-50%, -50%) !important;
   }
 }
+
+
+/* Official Converge logo asset */
+.converge-logo{display:block;object-fit:contain;object-position:left center;max-width:100%;height:auto}
+.med-converge-logo{width:208px;max-height:70px}
+.med-footer-logo{width:132px;max-height:44px}
+.sidebar-converge-logo{width:164px;max-height:56px}
+.app-shell.sidebar-collapsed .sidebar-converge-logo{width:56px;max-height:40px;object-fit:cover;object-position:left center}
+.med-brand{gap:0!important}
+.med-footer-brand{display:inline-flex;align-items:center}
+.auth-converge-logo,.auth-mobile-converge-logo,.care-converge-logo{filter:none}
+@media(max-width:680px){.med-converge-logo{width:168px;max-height:56px}.med-footer-logo{width:112px;max-height:38px}.sidebar-converge-logo{width:148px;max-height:50px}}
