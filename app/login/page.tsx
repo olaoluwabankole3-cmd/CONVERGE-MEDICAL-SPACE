@@ -63,7 +63,7 @@ export default function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-story">
-        <Link href="/" className="auth-brand"><span className="auth-brand-mark"><Activity size={22} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className="auth-brand"><img src="/converge-logo.svg" alt="Converge" className="converge-logo auth-converge-logo" /></Link>
         <div className="auth-story-content">
           <span className="auth-overline">CONNECTED CARE OPERATIONS</span>
           <h1>Better coordination starts with a clearer picture.</h1>
@@ -74,7 +74,7 @@ export default function LoginPage() {
       </section>
       <section className="auth-form-side">
         <div className="auth-form-wrap">
-          <div className="auth-mobile-brand"><span className="auth-brand-mark"><Activity size={22} /></span><strong>converge</strong></div>
+          <div className="auth-mobile-brand"><img src="/converge-logo.svg" alt="Converge" className="converge-logo auth-mobile-converge-logo" /></div>
           <span className="auth-overline">{mode === "signin" ? "WELCOME BACK" : "GET STARTED"}</span>
           <h2>{mode === "signin" ? "Sign in to your workspace" : "Create your account"}</h2>
           <p className="auth-intro">{mode === "signin" ? "Use your account credentials to continue." : "Create an account to register your hospital workspace."}</p>
