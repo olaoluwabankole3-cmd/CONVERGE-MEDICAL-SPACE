@@ -41,15 +41,8 @@ export default function MedicalLandingPage() {
       <header className="med-header">
         <div className="med-header-inner">
           <Link href="/" className="med-brand" aria-label="Converge Medical Intelligence home">
-            <span className="med-brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 36 36" fill="none">
-                <path d="M7 8 18 18 29 8M18 18 29 28M18 18 7 28" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="7" cy="8" r="2.7" fill="currentColor" /><circle cx="29" cy="8" r="2.7" fill="currentColor" />
-                <circle cx="7" cy="28" r="2.7" fill="currentColor" /><circle cx="29" cy="28" r="2.7" fill="currentColor" />
-                <circle cx="18" cy="18" r="4" fill="#e5b38e" stroke="#142119" strokeWidth="1.4" />
-              </svg>
-            </span>
-            <span className="med-brand-copy"><strong>converge<span>.</span></strong><small>MEDICAL INTELLIGENCE</small></span>
+            <img src="/converge-logo.svg" alt="Converge" className="converge-logo med-converge-logo" />
+            
           </Link>
 
           <nav className="med-main-nav" aria-label="Landing page navigation">
@@ -209,7 +202,7 @@ export default function MedicalLandingPage() {
       </section>
 
       <footer className="med-footer">
-        <div className="med-footer-inner"><Link href="/" className="med-footer-brand">converge<span>.</span></Link><span>Medical Intelligence · Connected hospital operations</span><span>© {new Date().getFullYear()} Converge</span></div>
+        <div className="med-footer-inner"><Link href="/" className="med-footer-brand" aria-label="Converge home"><img src="/converge-logo.svg" alt="Converge" className="converge-logo med-footer-logo" /></Link><span>Medical Intelligence · Connected hospital operations</span><span>© {new Date().getFullYear()} Converge</span></div>
         <p className="med-footer-disclaimer">Product direction and interface preview. Hospital deployment requires technical, security, privacy and workflow validation.</p>
       </footer>
     </main>
