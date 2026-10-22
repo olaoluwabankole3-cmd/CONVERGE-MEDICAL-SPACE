@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck, XCircle } from "lucide-react";
 
 type Service = {
   id: string; name: string; description: string | null; department: string | null;
