@@ -63,13 +63,18 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Check the hospital name, country, contact email, and field lengths." }, { status: 400 });
   }
   if (result.hospital.status !== "active") return NextResponse.json({ error: "Hospital settings can be changed after activation. Pending registration corrections should be handled through the platform administrator." }, { status: 409 });
-  const { data: updated, error: updateError } = await ctx.admin.from("hospitals")
-    .update({ name, country, city: city || null, contact_email: contactEmail, registration_number: registrationNumber || null })
-    .eq("id", hospitalId).select("id,name,registration_number,country,city,contact_email,status,created_at,updated_at").single();
-  if (updateError) return NextResponse.json({ error: "Unable to save hospital settings." }, { status: 500 });
-  const { error: auditError } = await ctx.admin.from("audit_events").insert({
-    hospital_id: hospitalId, actor_id: ctx.user.id, entity_type: "hospital", entity_id: hospitalId,
-    action: "hospital_settings_updated", details: { name, country, city, contact_email: contactEmail, registration_number: registrationNumber || null },
+
+  const { data: updated, error: updateError } = await ctx.admin.rpc("update_hospital_settings_with_audit", {
+    p_hospital_id: hospitalId,
+    p_actor_user_id: ctx.user.id,
+    p_name: name,
+    p_country: country,
+    p_city: city || null,
+    p_contact_email: contactEmail,
+    p_registration_number: registrationNumber || null,
   });
-  return NextResponse.json({ hospital: updated, warning: auditError ? "Settings were saved, but the audit event could not be recorded." : undefined });
+  if (updateError || !updated) {
+    return NextResponse.json({ error: "Unable to save hospital settings and their audit record." }, { status: 500 });
+  }
+  return NextResponse.json({ hospital: updated });
 }

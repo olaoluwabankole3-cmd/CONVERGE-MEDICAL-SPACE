@@ -1,6 +1,6 @@
 begin;
 
-select plan(33);
+select plan(41);
 
 -- Deterministic synthetic users/hospitals. Entire test rolls back.
 insert into auth.users (
@@ -287,6 +287,99 @@ select is(
   1,
   'Hospital approval creates its audit event in the same transaction'
 );
+
+
+-- Hospital settings and their audit event must commit atomically.
+select ok(
+  not has_function_privilege('anon', 'public.update_hospital_settings_with_audit(uuid,uuid,text,text,text,text,text)', 'execute'),
+  'Anonymous callers cannot invoke the hospital settings transaction'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.update_hospital_settings_with_audit(uuid,uuid,text,text,text,text,text)', 'execute'),
+  'Browser clients cannot bypass the authenticated settings API'
+);
+select ok(
+  has_function_privilege('service_role', 'public.update_hospital_settings_with_audit(uuid,uuid,text,text,text,text,text)', 'execute'),
+  'Trusted server role can invoke the hospital settings transaction'
+);
+
+set local role service_role;
+select throws_ok(
+  $select public.update_hospital_settings_with_audit(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '22222222-2222-4222-8222-222222222222',
+    'Unauthorised settings change', 'Nigeria', 'Lagos',
+    'ops-a@example.invalid', null
+  )$,
+  '42501',
+  'Active hospital owner or administrator required',
+  'Settings transaction rejects an actor from a different hospital'
+);
+
+select public.update_hospital_settings_with_audit(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '11111111-1111-4111-8111-111111111111',
+  'Synthetic Hospital A Updated', 'Nigeria', 'Lagos',
+  'ops-a@example.invalid', 'SYN-A-001'
+);
+reset role;
+
+select is(
+  (select name from public.hospitals where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+  'Synthetic Hospital A Updated',
+  'Authorised settings transaction saves the hospital update'
+);
+select is(
+  (select count(*)::integer from public.audit_events
+    where hospital_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and actor_id = '11111111-1111-4111-8111-111111111111'
+      and entity_type = 'hospital'
+      and entity_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and action = 'hospital_settings_updated'),
+  1,
+  'Settings transaction creates exactly one matching audit event'
+);
+
+-- Force the audit insert to fail and prove the hospital update rolls back too.
+create or replace function public.test_fail_hospital_settings_audit()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+begin
+  if new.action = 'hospital_settings_updated' then
+    raise exception 'forced audit failure';
+  end if;
+  return new;
+end;
+$;
+create trigger test_fail_hospital_settings_audit
+before insert on public.audit_events
+for each row execute function public.test_fail_hospital_settings_audit();
+
+set local role service_role;
+select throws_ok(
+  $select public.update_hospital_settings_with_audit(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '11111111-1111-4111-8111-111111111111',
+    'Should Roll Back', 'Nigeria', 'Lagos',
+    'ops-a@example.invalid', 'SYN-A-002'
+  )$,
+  'P0001',
+  'forced audit failure',
+  'Settings transaction fails when the audit insert fails'
+);
+reset role;
+
+drop trigger test_fail_hospital_settings_audit on public.audit_events;
+drop function public.test_fail_hospital_settings_audit();
+
+select is(
+  (select name from public.hospitals where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+  'Synthetic Hospital A Updated',
+  'Hospital settings remain unchanged when the audit insert fails'
+);
+
 
 reset role;
 select * from finish();
