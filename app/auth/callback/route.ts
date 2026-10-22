@@ -5,7 +5,15 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const requestedNext = url.searchParams.get("next") ?? "/onboarding";
-  const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/onboarding";
+  let next = "/onboarding";
+  if (requestedNext.startsWith("/") && !requestedNext.startsWith("//")) {
+    const candidate = new URL(requestedNext, url.origin);
+    // Check the resolved origin too: URL parsers treat backslashes like slashes
+    // for HTTPS URLs, so a value such as /\\evil.example could escape the site.
+    if (candidate.origin === url.origin) {
+      next = `${candidate.pathname}${candidate.search}${candidate.hash}`;
+    }
+  }
 
   if (code) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
