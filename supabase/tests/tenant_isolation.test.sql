@@ -345,14 +345,14 @@ create or replace function public.test_fail_hospital_settings_audit()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $testfn$
 begin
   if new.action = 'hospital_settings_updated' then
     raise exception 'forced audit failure';
   end if;
   return new;
 end;
-$;
+$testfn$;
 create trigger test_fail_hospital_settings_audit
 before insert on public.audit_events
 for each row execute function public.test_fail_hospital_settings_audit();
