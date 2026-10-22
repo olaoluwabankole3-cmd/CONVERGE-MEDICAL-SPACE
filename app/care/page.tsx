@@ -50,8 +50,7 @@ export default function CareDirectoryPage() {
     <main className="care-page">
       <header className="care-topbar">
         <Link href="/care" className="care-brand">
-          <span className="care-brand-mark"><Activity size={20} /></span>
-          <span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span>
+          <img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" />
         </Link>
         <nav className="care-header-actions" aria-label="Patient navigation">
           <Link href="/care/requests" className="care-nav-link">My requests</Link>
@@ -112,7 +111,7 @@ export default function CareDirectoryPage() {
         </div>
       </section>
 
-      <footer className="care-footer"><Link href="/care" className="care-brand compact"><span className="care-brand-mark"><Activity size={17} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link><span>Coordinate your next step with a participating hospital.</span><Link href="/login">Hospital team sign in</Link></footer>
+      <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Converge home"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Coordinate your next step with a participating hospital.</span><Link href="/login">Hospital team sign in</Link></footer>
     </main>
   );
 }
