@@ -305,12 +305,12 @@ select ok(
 
 set local role service_role;
 select throws_ok(
-  $select public.update_hospital_settings_with_audit(
+  $$select public.update_hospital_settings_with_audit(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     '22222222-2222-4222-8222-222222222222',
     'Unauthorised settings change', 'Nigeria', 'Lagos',
     'ops-a@example.invalid', null
-  )$,
+  )$$,
   '42501',
   'Active hospital owner or administrator required',
   'Settings transaction rejects an actor from a different hospital'
@@ -359,12 +359,12 @@ for each row execute function public.test_fail_hospital_settings_audit();
 
 set local role service_role;
 select throws_ok(
-  $select public.update_hospital_settings_with_audit(
+  $$select public.update_hospital_settings_with_audit(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     '11111111-1111-4111-8111-111111111111',
     'Should Roll Back', 'Nigeria', 'Lagos',
     'ops-a@example.invalid', 'SYN-A-002'
-  )$,
+  )$$,
   'P0001',
   'forced audit failure',
   'Settings transaction fails when the audit insert fails'
