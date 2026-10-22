@@ -1811,3 +1811,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
 .med-footer-brand{display:inline-flex;align-items:center}
 .auth-converge-logo,.auth-mobile-converge-logo,.care-converge-logo{filter:none}
 @media(max-width:680px){.med-converge-logo{width:168px;max-height:56px}.med-footer-logo{width:112px;max-height:38px}.sidebar-converge-logo{width:148px;max-height:50px}}
+
+
+/* Patient portal uses the same official Converge wordmark */
+.care-converge-logo{width:184px;max-height:62px}
+.care-footer-logo{width:124px;max-height:42px}
+@media(max-width:680px){.care-converge-logo{width:154px;max-height:52px}.care-footer-logo{width:112px;max-height:38px}}
