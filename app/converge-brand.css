@@ -1817,3 +1817,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
 .care-converge-logo{width:184px;max-height:62px}
 .care-footer-logo{width:124px;max-height:42px}
 @media(max-width:680px){.care-converge-logo{width:154px;max-height:52px}.care-footer-logo{width:112px;max-height:38px}}
+
+
+/* Standard wordmark sizing for the staff workspaces */
+.app-section-logo{width:174px;max-height:58px}
+@media(max-width:680px){.app-section-logo{width:148px;max-height:50px}}

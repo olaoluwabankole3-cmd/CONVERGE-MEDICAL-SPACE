@@ -74,7 +74,7 @@ export default function ReportsPage() {
   return (
     <main className="onboarding-page">
       <header className="onboarding-topbar">
-        <Link href="/" className="auth-brand"><span className="auth-brand-mark"><Activity size={21} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className="auth-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo auth-converge-logo" /></Link>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button className="onboarding-signout" onClick={() => void load()} disabled={loading}><RefreshCw size={15} /> Refresh</button>
           <Link className="onboarding-signout" href="/"><ArrowLeft size={15} /> Workspace</Link>

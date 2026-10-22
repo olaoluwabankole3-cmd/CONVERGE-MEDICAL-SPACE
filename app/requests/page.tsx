@@ -151,7 +151,7 @@ export default function HospitalRequestsPage() {
   return (
     <main className="care-page hospital-requests-page">
       <header className="care-topbar">
-        <Link href="/" className="care-brand"><span className="care-brand-mark"><Activity size={20} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className="care-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" /></Link>
         <nav className="care-header-actions"><Link href="/services" className="care-nav-link">Manage services</Link><Link href="/" className="care-nav-primary"><ArrowLeft size={15} /> Hospital workspace</Link></nav>
       </header>
 
@@ -222,7 +222,7 @@ export default function HospitalRequestsPage() {
         </section>
       </div>
 
-      <footer className="care-footer"><Link href="/" className="care-brand compact"><span className="care-brand-mark"><Activity size={17} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link><span>Patient requests are operational records; clinical decisions remain with authorised professionals.</span><Link href="/audit">Audit history <ArrowRight size={13} /></Link></footer>
+      <footer className="care-footer"><Link href="/" className="care-brand compact"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Patient requests are operational records; clinical decisions remain with authorised professionals.</span><Link href="/audit">Audit history <ArrowRight size={13} /></Link></footer>
     </main>
   );
 }

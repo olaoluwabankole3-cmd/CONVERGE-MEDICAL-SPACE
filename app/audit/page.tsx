@@ -137,10 +137,7 @@ export default function AuditHistoryPage() {
   return (
     <main className="audit-page">
       <header className="audit-topbar">
-        <Link href="/" className="audit-brand">
-          <span className="audit-brand-mark"><Activity size={20}/></span>
-          <span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span>
-        </Link>
+        <Link href="/" className="audit-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo app-section-logo" /></Link>
         <div className="ops-queue-topbar-right">
           <span className="ops-queue-hospital"><span className="ops-live-dot"/>{hospitalName || "Hospital workspace"}</span>
           <Link href="/team" className="ops-queue-utility"><ShieldCheck size={15}/> Team & access</Link>

@@ -284,7 +284,7 @@ export default function WorkPage() {
   return (
     <main className="ops-queue-page">
       <header className="ops-queue-topbar">
-        <Link href="/" className="ops-queue-brand"><span className="ops-queue-brand-mark"><Activity size={19} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className="ops-queue-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo app-section-logo" /></Link>
         <div className="ops-queue-topbar-right">
           <span className="ops-queue-hospital"><span className="ops-live-dot" />{hospitalName || "Hospital workspace"}</span>
           <Link href="/audit" className="ops-queue-utility"><ShieldCheck size={15} /> Audit history</Link>

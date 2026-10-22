@@ -159,7 +159,7 @@ export default function NotificationsPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link href="/" className={styles.brand}><span className={styles.brandMark}><Activity size={19} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className={styles.brand}><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo app-section-logo" /></Link>
         <nav className={styles.headerActions}>
           <Link href="/my-work" className={styles.headerLink}><Workflow size={14} /> My work</Link>
           <Link href="/ai-agents" className={styles.headerLink}>Operations analyst</Link>

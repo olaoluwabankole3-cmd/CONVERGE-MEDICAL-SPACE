@@ -97,7 +97,7 @@ export default function HospitalServicesPage() {
   return (
     <main className="care-page hospital-services-page">
       <header className="care-topbar">
-        <Link href="/" className="care-brand"><span className="care-brand-mark"><Activity size={20} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/" className="care-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" /></Link>
         <nav className="care-header-actions"><Link href="/requests" className="care-nav-link">Patient requests</Link><Link href="/" className="care-nav-primary"><ArrowLeft size={15} /> Hospital workspace</Link></nav>
       </header>
 
@@ -138,7 +138,7 @@ export default function HospitalServicesPage() {
         </div>
       </section>
       <div className="care-form-note-bottom"><ShieldCheck size={15} /> Publishing a service makes its name, description, department, and hospital location visible on the public patient directory. Do not put patient information in service descriptions.</div>
-      <footer className="care-footer"><Link href="/" className="care-brand compact"><span className="care-brand-mark"><Activity size={17} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link><span>Service configuration · {role || "Workspace access"}</span><Link href="/audit">Audit history <ArrowRight size={13} /></Link></footer>
+      <footer className="care-footer"><Link href="/" className="care-brand compact"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Service configuration · {role || "Workspace access"}</span><Link href="/audit">Audit history <ArrowRight size={13} /></Link></footer>
     </main>
   );
 }
