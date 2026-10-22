@@ -196,7 +196,7 @@ export default function PatientRequestsPage() {
   return (
     <main className="care-page">
       <header className="care-topbar">
-        <Link href="/care" className="care-brand"><span className="care-brand-mark"><Activity size={20} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link>
+        <Link href="/care" className="care-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" /></Link>
         <nav className="care-header-actions"><Link href="/care" className="care-nav-link">Service directory</Link><span className="care-account">{email || "Patient workspace"}</span><Link href="/patient-login" className="care-nav-primary">Account <ArrowRight size={15} /></Link></nav>
       </header>
 
@@ -276,7 +276,7 @@ export default function PatientRequestsPage() {
         </div>
       )}
 
-      <footer className="care-footer"><Link href="/care" className="care-brand compact"><span className="care-brand-mark"><Activity size={17} /></span><span><strong>converge</strong><small>MEDICAL INTELLIGENCE</small></span></Link><span>Only participating hospitals can respond to requests submitted here.</span><Link href="/login">Hospital team sign in</Link></footer>
+      <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Converge home"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Only participating hospitals can respond to requests submitted here.</span><Link href="/login">Hospital team sign in</Link></footer>
     </main>
   );
 }
