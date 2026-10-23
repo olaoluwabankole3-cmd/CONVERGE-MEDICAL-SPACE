@@ -113,18 +113,18 @@ export async function POST(request: NextRequest) {
   if (!invitedUserId) return NextResponse.json({ error: "The invited account could not be identified." }, { status: 502 });
 
   const { data: existingMembership, error: lookupError } = await clients.admin.from("hospital_memberships")
-    .select("id").eq("hospital_id", hospitalId).eq("user_id", invitedUserId).maybeSingle();
+    .select("id,role").eq("hospital_id", hospitalId).eq("user_id", invitedUserId).maybeSingle();
   if (lookupError) return NextResponse.json({ error: "The invitation was prepared, but hospital membership could not be checked." }, { status: 500 });
 
   if (existingMembership) {
     if (invitationSent) {
       const { error: auditError } = await clients.admin.from("audit_events").insert({
         hospital_id: hospitalId, actor_id: clients.user.id, entity_type: "hospital_membership",
-        entity_id: invitedUserId, action: "team_invitation_resent", details: { email, role },
+        entity_id: invitedUserId, action: "team_invitation_resent", details: { email, role: existingMembership.role },
       });
       return NextResponse.json({
-        member: { user_id: invitedUserId, email, role },
-        message: "A new invitation email was sent for this pending account.",
+        member: { user_id: invitedUserId, email, role: existingMembership.role },
+        message: "A new invitation email was sent for this pending account. Its existing hospital role has been preserved.",
         warning: auditError ? "The invitation was sent, but the audit event could not be recorded." : undefined,
       }, { status: 200 });
     }
