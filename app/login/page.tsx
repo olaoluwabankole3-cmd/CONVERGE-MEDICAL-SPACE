@@ -31,7 +31,7 @@ export default function LoginPage() {
     try {
       if (mode === "forgot") {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+          redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
         });
         if (resetError) throw resetError;
         setMessage("If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.");
@@ -41,7 +41,7 @@ export default function LoginPage() {
           password,
           options: {
             data: { full_name: fullName.trim() },
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+            emailRedirectTo: `${window.location.origin}/auth/confirm?next=/onboarding`,
           },
         });
         if (authError) throw authError;

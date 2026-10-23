@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
   // invitation instead of silently adding membership without notifying them.
   if (!existing || !existingIsConfirmed) {
     const { data: invite, error: inviteError } = await clients.admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: new URL("/auth/callback?next=/accept-invite", request.nextUrl.origin).toString(),
+      redirectTo: new URL("/auth/confirm?next=/accept-invite", request.nextUrl.origin).toString(),
       data: { invited_hospital_id: hospitalId, invited_hospital_name: hospital.name },
     });
     if (inviteError || !invite.user) {

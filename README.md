@@ -128,3 +128,20 @@ The authenticated workspace navigation separates operational queues by purpose:
 - **Audit history** — `/audit` provides a searchable, category-filtered view of the latest 500 hospital-scoped events and CSV export for the current filtered view.
 
 The work queues share one responsive interaction pattern while showing queue-specific headings and context. Creating work records and updating their operational status follows the existing work-item permissions. Appointment records are displayed separately from appointment-related work items; this screen does not bypass the request workflow to schedule, confirm, or cancel appointments. Audit history is read-only.
+
+## Staff invitations and account recovery
+
+Staff access is granted by a Hospital Owner or Administrator through **Team & Access**. Staff should not register a new hospital to join an existing workspace.
+
+For invitation and password-reset emails to reach external staff addresses:
+
+1. Configure a custom SMTP provider in the Supabase project's Authentication settings. The built-in SMTP service is for limited testing and restricts delivery to pre-authorized addresses.
+2. Set the Supabase **Site URL** to `https://converge-medical-space.vercel.app` and ensure the site is listed in Authentication URL configuration.
+3. In **Authentication → Email Templates**, configure these templates to use the server-side token-hash confirmation route. Keep the requested paths exactly as shown:
+   - **Invite user**: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/accept-invite`
+   - **Reset password**: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`
+   - **Confirm signup**: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/onboarding`
+4. In each template, use the corresponding URL above as the email action link. Keep the default subject or customize it to match Converge branding.
+5. Check Supabase Auth logs if a send fails. After SMTP is configured, retry the invitation from Team & Access; an unconfirmed account left by an earlier failed invitation can be invited again.
+
+New invitees use the invitation link to set their first password at `/accept-invite`. Existing confirmed accounts are added to the hospital without a new invite email; they sign in using their existing password or use **Forgot password?**. Password-reset emails use `/reset-password`.
