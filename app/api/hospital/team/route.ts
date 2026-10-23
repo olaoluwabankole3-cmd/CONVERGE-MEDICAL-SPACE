@@ -86,32 +86,68 @@ export async function POST(request: NextRequest) {
   if (hospitalError) return NextResponse.json({ error: "Unable to verify hospital status." }, { status: 500 });
   if (!hospital || hospital.status !== "active") return NextResponse.json({ error: "The hospital must be active before team invitations can be sent." }, { status: 409 });
 
-  const { data: existingUser } = await clients.admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const existing = existingUser?.users.find(user => user.email?.toLowerCase() === email);
+  const { data: userPage, error: usersError } = await clients.admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (usersError) return NextResponse.json({ error: "Unable to verify whether this email already has an account." }, { status: 500 });
+  const existing = userPage.users.find(user => user.email?.toLowerCase() === email);
+  const existingIsConfirmed = Boolean(existing?.email_confirmed_at || existing?.confirmed_at);
   let invitedUserId = existing?.id;
-  if (!invitedUserId) {
+  let invitationSent = false;
+
+  // A confirmed account should use its existing credentials. An unconfirmed
+  // account may be left behind when a previous invite email failed; retry the
+  // invitation instead of silently adding membership without notifying them.
+  if (!existing || !existingIsConfirmed) {
     const { data: invite, error: inviteError } = await clients.admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: new URL("/auth/callback?next=/", request.nextUrl.origin).toString(),
+      redirectTo: new URL("/auth/callback?next=/accept-invite", request.nextUrl.origin).toString(),
       data: { invited_hospital_id: hospitalId, invited_hospital_name: hospital.name },
     });
     if (inviteError || !invite.user) {
-      return NextResponse.json({ error: inviteError?.message ?? "The invitation could not be created. Check Supabase email settings." }, { status: 502 });
+      return NextResponse.json({
+        error: `Could not send the invitation email. ${inviteError?.message ?? "Supabase did not return an invited account."} Check the Supabase Auth SMTP configuration and email logs before retrying.`,
+      }, { status: 502 });
     }
     invitedUserId = invite.user.id;
+    invitationSent = true;
   }
+
+  if (!invitedUserId) return NextResponse.json({ error: "The invited account could not be identified." }, { status: 502 });
+
   const { data: existingMembership, error: lookupError } = await clients.admin.from("hospital_memberships")
     .select("id").eq("hospital_id", hospitalId).eq("user_id", invitedUserId).maybeSingle();
-  if (lookupError) return NextResponse.json({ error: "The invite was created, but membership could not be checked." }, { status: 500 });
-  if (existingMembership) return NextResponse.json({ error: "This user is already a member of this hospital." }, { status: 409 });
+  if (lookupError) return NextResponse.json({ error: "The invitation was prepared, but hospital membership could not be checked." }, { status: 500 });
+
+  if (existingMembership) {
+    if (invitationSent) {
+      const { error: auditError } = await clients.admin.from("audit_events").insert({
+        hospital_id: hospitalId, actor_id: clients.user.id, entity_type: "hospital_membership",
+        entity_id: invitedUserId, action: "team_invitation_resent", details: { email, role },
+      });
+      return NextResponse.json({
+        member: { user_id: invitedUserId, email, role },
+        message: "A new invitation email was sent for this pending account.",
+        warning: auditError ? "The invitation was sent, but the audit event could not be recorded." : undefined,
+      }, { status: 200 });
+    }
+    return NextResponse.json({ error: "This user is already a member of this hospital." }, { status: 409 });
+  }
+
   const { error: insertError } = await clients.admin.from("hospital_memberships").insert({
     hospital_id: hospitalId, user_id: invitedUserId, role,
   });
   if (insertError) return NextResponse.json({ error: "The account was identified, but hospital membership could not be added." }, { status: 500 });
+
   const { error: auditError } = await clients.admin.from("audit_events").insert({
     hospital_id: hospitalId, actor_id: clients.user.id, entity_type: "hospital_membership",
-    entity_id: invitedUserId, action: "team_member_invited", details: { email, role },
+    entity_id: invitedUserId, action: invitationSent ? "team_member_invited" : "team_member_added",
+    details: { email, role, invitation_sent: invitationSent },
   });
-  return NextResponse.json({ member: { user_id: invitedUserId, email, role }, message: existing ? "Existing account added to this hospital workspace." : "Invitation email sent through Supabase Auth.", warning: auditError ? "Membership was added, but the audit event could not be recorded." : undefined }, { status: 201 });
+  const message = invitationSent
+    ? "Invitation email sent through Supabase Auth. The worker must open it and set their password."
+    : "Existing account added to this hospital workspace. No invitation email was sent; the worker should sign in with their existing password or use Forgot password.";
+  return NextResponse.json({
+    member: { user_id: invitedUserId, email, role }, message,
+    warning: auditError ? "Membership was added, but the audit event could not be recorded." : undefined,
+  }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {

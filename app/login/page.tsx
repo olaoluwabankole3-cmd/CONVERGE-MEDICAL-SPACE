@@ -6,7 +6,7 @@ import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -29,7 +29,13 @@ export default function LoginPage() {
     }
 
     try {
-      if (mode === "signup") {
+      if (mode === "forgot") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        });
+        if (resetError) throw resetError;
+        setMessage("If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.");
+      } else if (mode === "signup") {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -75,18 +81,19 @@ export default function LoginPage() {
       <section className="auth-form-side">
         <div className="auth-form-wrap">
           <div className="auth-mobile-brand"><img src="/converge-logo.svg" alt="Converge" className="converge-logo auth-mobile-converge-logo" /></div>
-          <span className="auth-overline">{mode === "signin" ? "WELCOME BACK" : "GET STARTED"}</span>
-          <h2>{mode === "signin" ? "Sign in to your workspace" : "Create your account"}</h2>
-          <p className="auth-intro">{mode === "signin" ? "Use your account credentials to continue." : "Create an account to register your hospital workspace."}</p>
+          <span className="auth-overline">{mode === "signin" ? "WELCOME BACK" : mode === "signup" ? "GET STARTED" : "ACCOUNT RECOVERY"}</span>
+          <h2>{mode === "signin" ? "Sign in to your workspace" : mode === "signup" ? "Create your account" : "Reset your password"}</h2>
+          <p className="auth-intro">{mode === "signin" ? "Use your account credentials to continue." : mode === "signup" ? "Create an account to register your hospital workspace." : "Enter your account email and we’ll send a secure password-reset link."}</p>
           <form className="auth-form" onSubmit={submit}>
             {mode === "signup" && <label>Full name<input autoComplete="name" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your full name" /></label>}
             <label>Email address<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@hospital.org" /></label>
-            <label>Password<span className="auth-password"><input type={showPassword ? "text" : "password"} autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
+            {mode !== "forgot" && <label>Password<span className="auth-password"><input type={showPassword ? "text" : "password"} autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>}
             {error && <div className="auth-alert error" role="alert">{error}</div>}
             {message && <div className="auth-alert success" role="status">{message}</div>}
-            <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"} {!busy && <ArrowRight size={17} />}</button>
+            <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"} {!busy && <ArrowRight size={17} />}</button>
           </form>
-          <p className="auth-switch">{mode === "signin" ? "New to Converge?" : "Already have an account?"} <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
+          {mode === "signin" && <p className="auth-switch"><button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }}>Forgot password?</button></p>}
+          <p className="auth-switch">{mode === "signin" ? "New to Converge?" : mode === "signup" ? "Already have an account?" : "Remember your password?"} <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); setPassword(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
           <p className="auth-legal"><ShieldCheck size={14} /> Do not submit patient information through this sign-in page.</p>
           <Link href="/patient-login" className="auth-back">Looking for care? Open the patient portal →</Link>
           <Link href="/" className="auth-back">← Back to platform home</Link>
