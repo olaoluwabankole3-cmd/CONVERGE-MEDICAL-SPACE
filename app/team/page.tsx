@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Member = { id?: string; user_id: string; email: string; role: string; created_at?: string };
 type Hospital = { id: string; name: string; status: string };
+type WorkspaceOption = Hospital & { role: string; created_at?: string };
 
 const roles = [
   { value: "operations", label: "Operations", description: "Coordinate operational work items." },
@@ -18,6 +19,11 @@ const roles = [
 
 export default function HospitalTeamPage() {
   const router = useRouter();
+  const [requestedHospitalId, setRequestedHospitalId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("hospitalId") ?? "";
+  });
+  const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [hospital, setHospital] = useState<Hospital | null>(null);
   const [role, setRole] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
@@ -29,40 +35,70 @@ export default function HospitalTeamPage() {
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setNotice("");
+    setHospital(null); setRole(""); setMembers([]);
     try {
       const supabase = getSupabaseBrowserClient();
       if (!supabase) throw new Error("Supabase is not configured.");
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) { router.replace("/login"); return; }
+
+      // Resolve the role against an explicitly selected hospital. Do not assume
+      // the latest membership is the workspace the user intended to manage.
       const { data: memberships, error: membershipError } = await supabase.from("hospital_memberships")
-        .select("hospital_id,role,created_at").order("created_at", { ascending: false }).limit(1);
+        .select("hospital_id,role,created_at").order("created_at", { ascending: false }).limit(100);
       if (membershipError) throw membershipError;
-      const membership = memberships?.[0];
-      if (!membership) throw new Error("No active hospital membership was found for this account.");
-      const { data: hospitalData, error: hospitalError } = await supabase.from("hospitals")
-        .select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
-      if (hospitalError) throw hospitalError;
-      if (!hospitalData) throw new Error("The hospital workspace could not be found.");
-      setHospital(hospitalData as Hospital); setRole(membership.role);
-      if (hospitalData.status !== "active") {
+      if (!memberships?.length) throw new Error("No hospital membership was found for this account.");
+
+      const hospitalIds = [...new Set(memberships.map(item => item.hospital_id))];
+      const { data: hospitalRows, error: hospitalsError } = await supabase.from("hospitals")
+        .select("id,name,status").in("id", hospitalIds);
+      if (hospitalsError) throw hospitalsError;
+      const hospitalById = new Map((hospitalRows ?? []).map(item => [item.id, item]));
+      const options = memberships.flatMap(membership => {
+        const hospitalData = hospitalById.get(membership.hospital_id);
+        return hospitalData ? [{ ...hospitalData, role: membership.role, created_at: membership.created_at }] : [];
+      }) as WorkspaceOption[];
+      setWorkspaces(options);
+      if (!options.length) throw new Error("No accessible hospital workspace could be found.");
+
+      const chosenId = requestedHospitalId || (options.length === 1 ? options[0].id : "");
+      if (!chosenId) {
+        // If the account belongs to multiple hospitals, require an explicit
+        // choice instead of silently opening the newest hospital membership.
         setMembers([]);
         return;
       }
-      if (!["owner", "admin"].includes(membership.role)) {
+      const selected = options.find(item => item.id === chosenId);
+      if (!selected) throw new Error("You do not have access to the selected hospital workspace.");
+
+      setHospital({ id: selected.id, name: selected.name, status: selected.status });
+      setRole(selected.role);
+      if (selected.status !== "active") {
         setMembers([]);
         return;
       }
-      const response = await fetch(`/api/hospital/team?hospitalId=${encodeURIComponent(hospitalData.id)}`, { cache: "no-store" });
+      if (!["owner", "admin"].includes(selected.role)) {
+        setMembers([]);
+        return;
+      }
+
+      const response = await fetch(`/api/hospital/team?hospitalId=${encodeURIComponent(selected.id)}`, { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Unable to load team members.");
       setMembers(payload.members ?? []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load the hospital team.");
     } finally { setLoading(false); }
-  }, [router]);
+  }, [router, requestedHospitalId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const syncFromHistory = () => setRequestedHospitalId(new URLSearchParams(window.location.search).get("hospitalId") ?? "");
+    window.addEventListener("popstate", syncFromHistory);
+    return () => window.removeEventListener("popstate", syncFromHistory);
+  }, []);
 
   async function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,11 +166,24 @@ export default function HospitalTeamPage() {
       </header>
       <div className="onboarding-content">
         <div className="onboarding-heading"><span className="auth-overline">HOSPITAL GOVERNANCE</span><h1>Team and access</h1><p>Manage who belongs to this hospital workspace and the role they use to access operational records.</p></div>
+        {!loading && workspaces.length > 1 && <div style={{ marginBottom: 18, maxWidth: 520 }}>
+          <label htmlFor="team-hospital-select" style={{ display: "block", marginBottom: 7, color: "var(--muted, #72818d)", fontSize: 12, fontWeight: 650 }}>Hospital workspace</label>
+          <select id="team-hospital-select" value={hospital?.id ?? requestedHospitalId} onChange={event => {
+            const nextId = event.target.value;
+            setRequestedHospitalId(nextId);
+            setMembers([]); setHospital(null); setRole(""); setError(""); setNotice("");
+            router.push(nextId ? `/team?hospitalId=${encodeURIComponent(nextId)}` : "/team");
+          }} style={{ width: "100%", border: "1px solid var(--line, #e5ebef)", borderRadius: 9, padding: "11px 12px", background: "#0d1511", color: "#f3f5f3", fontSize: 13 }}>
+            <option value="">Choose a hospital workspace…</option>
+            {workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name} · {workspace.role.replaceAll("_", " ")}</option>)}
+          </select>
+        </div>}
         {error && <div className="auth-alert error" role="alert">{error}</div>}
         {notice && <div className="auth-alert success" role="status"><CheckCircle2 size={17} /> {notice}</div>}
         {loading && <div className="onboarding-card"><LoaderCircle size={18} /> Loading hospital access…</div>}
+        {!loading && !hospital && workspaces.length > 1 && !error && <section className="onboarding-card"><div className="onboarding-card-title"><span className="onboarding-icon"><Building2 size={20} /></span><div><h2>Select a hospital workspace</h2><p>Choose the hospital whose team access you need to review. Roles and permissions are checked independently for each hospital.</p></div></div></section>}
         {!loading && hospital && hospital.status !== "active" && <section className="onboarding-card"><div className="onboarding-card-title"><span className="onboarding-icon"><ShieldCheck size={20} /></span><div><h2>Workspace not active</h2><p>Team administration becomes available after an authorised platform administrator approves {hospital.name}.</p></div></div></section>}
-        {!loading && hospital?.status === "active" && !canManage && <section className="onboarding-card"><div className="onboarding-card-title"><span className="onboarding-icon"><ShieldCheck size={20} /></span><div><h2>Administrator permission required</h2><p>Your current role is {role}. Ask the hospital owner or an administrator to manage team access.</p></div></div></section>}
+        {!loading && hospital?.status === "active" && !canManage && <section className="onboarding-card"><div className="onboarding-card-title"><span className="onboarding-icon"><ShieldCheck size={20} /></span><div><h2>Administrator permission required</h2><p>Your role in {hospital.name} is {role}. Ask that hospital’s owner or an administrator to manage its team access.</p></div></div></section>}
         {!loading && hospital?.status === "active" && canManage && <>
           <section className="onboarding-card" style={{ marginBottom: 18 }}>
             <div className="onboarding-card-title"><span className="onboarding-icon"><Building2 size={20} /></span><div><h2>{hospital.name}</h2><p>Hospital workspace · {members.length} current member(s)</p></div><span className="approval-pending" style={{ color: "#bfeecb", background: "rgba(164,237,193,.10)", border: "1px solid rgba(164,237,193,.18)" }}>Active</span></div>
