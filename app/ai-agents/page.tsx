@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { hospitalApiUrl } from "@/lib/client/hospital-workspace";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -106,7 +108,7 @@ export default function AIAgentsPage() {
     else setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/operations/insights", { cache: "no-store" });
+      const response = await fetch(hospitalApiUrl("/api/operations/insights"), { cache: "no-store" });
       const payload = await response.json();
       if (response.status === 401) {
         window.location.assign("/login");
@@ -191,6 +193,7 @@ export default function AIAgentsPage() {
           <Link href="/" className={styles.backLink}><ArrowLeft size={14} /> Hospital workspace</Link>
         </nav>
       </header>
+      <HospitalWorkspaceSwitcher />
 
       <section className={styles.hero}>
         <div>
