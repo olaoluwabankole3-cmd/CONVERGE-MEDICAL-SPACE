@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { hospitalApiUrl } from "@/lib/client/hospital-workspace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -88,7 +90,7 @@ export default function MyWorkPage() {
     else setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/operations/my-work", { cache: "no-store" });
+      const response = await fetch(hospitalApiUrl("/api/operations/my-work"), { cache: "no-store" });
       const payload = await response.json();
       if (response.status === 401) {
         window.location.assign("/login");
@@ -175,6 +177,7 @@ export default function MyWorkPage() {
           <Link href="/" className={styles.backLink}><ArrowLeft size={14} /> Workspace</Link>
         </nav>
       </header>
+      <HospitalWorkspaceSwitcher />
 
       <section className={styles.hero}>
         <div>
