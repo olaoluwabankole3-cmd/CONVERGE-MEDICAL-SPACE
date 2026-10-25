@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { getSelectedHospitalId } from "@/lib/client/hospital-workspace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,10 +35,14 @@ export default function ReportsPage() {
       if (!supabase) throw new Error("Supabase is not configured.");
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) { router.replace("/login"); return; }
+      const requestedHospitalId = getSelectedHospitalId();
       const { data: memberships, error: membershipError } = await supabase.from("hospital_memberships")
-        .select("hospital_id,created_at").order("created_at", { ascending: false }).limit(1);
+        .select("hospital_id,created_at").order("created_at", { ascending: false }).limit(100);
       if (membershipError) throw membershipError;
-      const membership = memberships?.[0];
+      const membership = requestedHospitalId
+        ? (memberships ?? []).find(item => item.hospital_id === requestedHospitalId)
+        : memberships?.[0];
+      if (requestedHospitalId && !membership) throw new Error("You do not have access to the selected hospital workspace.");
       if (!membership) throw new Error("No active hospital membership was found.");
       const { data: hospital, error: hospitalError } = await supabase.from("hospitals")
         .select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
@@ -80,6 +86,7 @@ export default function ReportsPage() {
           <Link className="onboarding-signout" href="/"><ArrowLeft size={15} /> Workspace</Link>
         </div>
       </header>
+      <HospitalWorkspaceSwitcher />
       <div className="onboarding-content" style={{ maxWidth: 1180 }}>
         <div className="onboarding-heading"><span className="auth-overline">OPERATIONAL INTELLIGENCE</span><h1>Reports and analytics</h1><p>Review saved work across {hospitalName || "your hospital workspace"} and export a filtered operational snapshot.</p></div>
         {error && <div className="auth-alert error" role="alert">{error}</div>}
