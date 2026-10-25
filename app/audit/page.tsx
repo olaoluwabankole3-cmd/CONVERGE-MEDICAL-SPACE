@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { getSelectedHospitalId } from "@/lib/client/hospital-workspace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -62,15 +64,25 @@ export default function AuditHistoryPage() {
         .order("created_at", { ascending: false }).limit(10);
       if (memberError) throw memberError;
 
+      const requestedHospitalId = getSelectedHospitalId();
       let hospitalId = "";
-      for (const membership of memberships ?? []) {
+      const candidateMemberships = memberships ?? [];
+      if (requestedHospitalId) {
+        const membership = candidateMemberships.find(item => item.hospital_id === requestedHospitalId);
+        if (!membership) throw new Error("You do not have access to the selected hospital workspace.");
         const { data: hospital, error: hospitalError } = await supabase
           .from("hospitals").select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
         if (hospitalError) throw hospitalError;
-        if (hospital?.status === "active") {
-          hospitalId = hospital.id;
-          setHospitalName(hospital.name);
-          break;
+        if (!hospital || hospital.status !== "active") throw new Error("The selected hospital workspace is not active.");
+        hospitalId = hospital.id; setHospitalName(hospital.name);
+      } else {
+        for (const membership of candidateMemberships) {
+          const { data: hospital, error: hospitalError } = await supabase
+            .from("hospitals").select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
+          if (hospitalError) throw hospitalError;
+          if (hospital?.status === "active") {
+            hospitalId = hospital.id; setHospitalName(hospital.name); break;
+          }
         }
       }
       if (!hospitalId) {
@@ -144,6 +156,7 @@ export default function AuditHistoryPage() {
           <Link href="/reports" className="ops-queue-utility"><ArrowRight size={15}/> Reports</Link>
         </div>
       </header>
+      <HospitalWorkspaceSwitcher />
 
       <div className="audit-content">
         <div className="ops-queue-breadcrumb"><Link href="/">Workspace</Link><span>/</span><span>Governance</span><span>/</span><strong>Audit history</strong></div>
