@@ -4,20 +4,23 @@ import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher"
 import { hospitalApiUrl } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck, UserRound, XCircle } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, Clock3, MessageCircle, RefreshCw, Send, ShieldCheck, Sparkles, UserRound, XCircle } from "lucide-react";
 
 type StaffMessage = { id: string; author_user_id: string; author_type: string; visibility: string; body: string; created_at: string };
 type StaffAppointment = {
   id: string; status: string; start_at: string; end_at: string; location: string | null;
-  patient_instructions: string | null; confirmed_at: string | null;
+  patient_instructions: string | null; confirmed_at: string | null; created_at?: string;
 };
+type StaffWorkItem = { id: string; patient_request_id: string; reference_code: string; title: string; summary: string | null; item_type: string; priority: string; status: string; owner_id: string | null; due_at: string | null; created_at: string; updated_at: string };
+type StaffAuditEvent = { id: number; actor_id: string | null; entity_type: string; entity_id: string; action: string; details: Record<string, unknown>; created_at: string };
+type CoordinationEvent = { id: string; at: string; title: string; detail: string; kind: "request" | "message" | "task" | "audit" | "appointment" };
 type StaffRequest = {
   id: string; request_code: string; hospital_id: string; patient_user_id: string; service_id: string | null;
   request_type: string; status: string; subject: string; preferred_start_at: string | null; preferred_end_at: string | null;
   submitted_at: string; created_at: string; closed_at: string | null;
   patient: { display_name: string; phone_number: string | null };
   service: { id: string; name: string; department: string | null } | null;
-  appointment: StaffAppointment | null; messages: StaffMessage[];
+  appointment: StaffAppointment | null; messages: StaffMessage[]; workItems: StaffWorkItem[]; auditEvents: StaffAuditEvent[];
 };
 const statusLabel: Record<string, string> = {
   submitted: "New request", under_review: "Under review", awaiting_patient: "Awaiting patient",
@@ -38,6 +41,85 @@ function toIso(value: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function coordinationGuidance(item: StaffRequest) {
+  const tasks = item.workItems ?? [];
+  const openTasks = tasks.filter(task => !["resolved", "closed"].includes(task.status));
+  const overdue = openTasks.find(task => task.due_at && new Date(task.due_at).getTime() < Date.now());
+  if (overdue) {
+    return { title: "A linked work item is overdue", detail: `“${overdue.title}” passed its due time. Review ownership and agree the next operational step.`, tone: "urgent" as const };
+  }
+  if (terminal.has(item.status)) {
+    return { title: "The request has reached an outcome", detail: "Check that linked work is resolved and the final patient update is recorded before treating the workflow as complete.", tone: "complete" as const };
+  }
+  if (item.status === "appointment_proposed") {
+    return { title: "The next step sits with the patient", detail: "An appointment time has been proposed. Wait for the patient's response; the proposal is not a confirmed booking.", tone: "waiting" as const };
+  }
+  if (item.appointment?.status === "patient_accepted") {
+    return { title: "Hospital confirmation is outstanding", detail: "The patient accepted the proposed time. An authorised staff member must confirm the appointment.", tone: "attention" as const };
+  }
+  if (item.status === "awaiting_patient") {
+    return { title: "Patient information is outstanding", detail: "The hospital has requested information. Review the conversation before sending another follow-up.", tone: "waiting" as const };
+  }
+  if (["submitted", "awaiting_hospital"].includes(item.status)) {
+    const waitingHours = (Date.now() - new Date(item.submitted_at).getTime()) / 3_600_000;
+    if (waitingHours > 24) return { title: "A hospital response may be delayed", detail: "This request has been waiting for more than 24 hours. Review the queue, assign an owner and send a clear update.", tone: "urgent" as const };
+    return { title: "Hospital review is the next step", detail: "Review the request, confirm which team should own it, and make the next action visible to the patient.", tone: "attention" as const };
+  }
+  if (openTasks.some(task => !task.owner_id)) {
+    return { title: "A linked task needs an owner", detail: "At least one open work item is unassigned. Agree who is responsible before handing the request across teams.", tone: "attention" as const };
+  }
+  if (["confirmed", "in_progress"].includes(item.status)) {
+    return { title: "Keep the work moving to an outcome", detail: "Check the linked operational work and record the final outcome when the responsible team has completed its step.", tone: "steady" as const };
+  }
+  return { title: "Keep the request and its work connected", detail: "Use the linked work items and conversation below as the shared context for the next handover.", tone: "steady" as const };
+}
+
+function coordinationTimeline(item: StaffRequest): CoordinationEvent[] {
+  const events: CoordinationEvent[] = [{
+    id: `request-${item.id}`, at: item.submitted_at, title: "Request received",
+    detail: `Opened in Converge · ${item.request_code}`, kind: "request",
+  }];
+  for (const message of item.messages ?? []) {
+    events.push({
+      id: `message-${message.id}`, at: message.created_at,
+      title: message.visibility === "internal" ? "Internal team note" : message.author_type === "patient" ? "Patient message" : message.author_type === "staff" ? "Hospital team update" : "System message",
+      detail: message.body, kind: "message",
+    });
+  }
+  for (const task of item.workItems ?? []) {
+    events.push({
+      id: `task-${task.id}`, at: task.created_at, title: `Work item linked · ${task.title}`,
+      detail: `${task.item_type.replaceAll("_", " ")} · ${task.priority} priority · ${task.status.replaceAll("_", " ")}`, kind: "task",
+    });
+    if (task.updated_at && task.updated_at !== task.created_at) {
+      events.push({
+        id: `task-update-${task.id}`, at: task.updated_at, title: `Work item updated · ${task.title}`,
+        detail: `Current state: ${task.status.replaceAll("_", " ")}`, kind: "task",
+      });
+    }
+  }
+  for (const event of item.auditEvents ?? []) {
+    if (event.action === "patient_request_submitted") continue;
+    events.push({
+      id: `audit-${event.id}`, at: event.created_at,
+      title: event.action.replaceAll("_", " "),
+      detail: "Recorded in the hospital audit trail.", kind: "audit",
+    });
+  }
+  if (item.appointment) {
+    events.push({
+      id: `appointment-${item.appointment.id}`,
+      at: item.appointment.confirmed_at ?? item.appointment.created_at ?? item.submitted_at,
+      title: `Appointment ${item.appointment.status.replaceAll("_", " ")}`,
+      detail: `${formatDate(item.appointment.start_at)} – ${formatDate(item.appointment.end_at)}${item.appointment.location ? ` · ${item.appointment.location}` : ""}`,
+      kind: "appointment",
+    });
+  }
+  return events.filter(event => event.at && !Number.isNaN(new Date(event.at).getTime()))
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 14);
 }
 
 export default function HospitalRequestsPage() {
@@ -105,6 +187,8 @@ export default function HospitalRequestsPage() {
   }), [requests, filter, search]);
 
   const selected = requests.find(item => item.id === selectedId) ?? null;
+  const selectedGuidance = selected ? coordinationGuidance(selected) : null;
+  const selectedTimeline = selected ? coordinationTimeline(selected) : [];
   const canManage = ["owner", "admin", "clinician", "operations"].includes(role);
 
   async function act(action: string, requestItem = selected, message = "", proposal?: { startAt: string; endAt: string; location: string; instructions: string }) {
@@ -134,6 +218,32 @@ export default function HospitalRequestsPage() {
       setError(cause instanceof Error ? cause.message : "Unable to complete this action.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function copyHandover(item: StaffRequest) {
+    const guidance = coordinationGuidance(item);
+    const tasks = (item.workItems ?? []).map(task =>
+      `- ${task.title} — ${task.status.replaceAll("_", " ")}; ${task.priority} priority; ${task.owner_id ? "assigned" : "unassigned"}${task.due_at ? `; due ${formatDate(task.due_at)}` : ""}`
+    );
+    const brief = [
+      `CONVERGE HANDOVER — ${item.request_code}`,
+      `Request: ${item.subject}`,
+      `Service: ${item.service?.name ?? "Not specified"}${item.service?.department ? ` / ${item.service.department}` : ""}`,
+      `Status: ${statusLabel[item.status] ?? item.status.replaceAll("_", " ")}`,
+      `Coordination signal: ${guidance.title}`,
+      guidance.detail,
+      "Linked work:",
+      ...(tasks.length ? tasks : ["- No linked work items found."]),
+      `Appointment: ${item.appointment ? `${item.appointment.status.replaceAll("_", " ")} — ${formatDate(item.appointment.start_at)} to ${formatDate(item.appointment.end_at)}` : "None proposed"}`,
+      "",
+      "Operational handover only. Verify current context and permissions before taking action.",
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(brief);
+      setNotice("Handover brief copied. Review it before sharing with the receiving team.");
+    } catch {
+      setError("The handover brief could not be copied in this browser. You can review the coordination details on this page.");
     }
   }
 
@@ -216,6 +326,43 @@ export default function HospitalRequestsPage() {
             {showProposal && <form className="staff-action-form" onSubmit={submitProposal}><h3>Propose an appointment time</h3><p>This proposes a time for the patient to accept. It does not book the appointment yet.</p><div className="care-form-grid"><label>Start time<input type="datetime-local" required value={startAt} onChange={event => setStartAt(event.target.value)} /></label><label>End time<input type="datetime-local" required value={endAt} onChange={event => setEndAt(event.target.value)} /></label></div><label>Location <span className="care-optional">Optional</span><input value={location} onChange={event => setLocation(event.target.value)} maxLength={240} placeholder="e.g. Outpatient department" /></label><label>Patient instructions <span className="care-optional">Optional</span><textarea value={instructions} onChange={event => setInstructions(event.target.value)} rows={2} maxLength={1200} placeholder="Arrival guidance or documents to bring." /></label><label>Additional message <span className="care-optional">Optional</span><textarea value={decisionMessage} onChange={event => setDecisionMessage(event.target.value)} rows={2} maxLength={1000} placeholder="Any additional context." /></label><div><button type="button" className="care-button-secondary small" onClick={() => setShowProposal(false)}>Cancel</button><button type="submit" className="care-button-primary small" disabled={!canManage || busy}><CalendarClock size={14} /> Send proposal</button></div></form>}
 
             {!showProposal && !showAskForm && <label className="staff-decision-note">Optional patient-visible note for completion or cancellation decisions<textarea value={decisionMessage} onChange={event => setDecisionMessage(event.target.value)} rows={2} maxLength={2000} placeholder="Add a concise explanation if needed." /></label>}
+
+
+            <section className="coordination-room" aria-label="Coordination room">
+              <div className="coordination-room-heading">
+                <div className="coordination-room-title">
+                  <span className="coordination-room-mark"><Activity size={17} /></span>
+                  <div><span className="care-eyebrow">CONVERGE COORDINATION ROOM</span><h3>One shared picture of this request</h3><p>Conversation, linked work and recorded decisions in one operational view.</p></div>
+                </div>
+                <button type="button" className="coordination-copy-button" onClick={() => void copyHandover(selected)}><ClipboardList size={15} /> Copy handover brief</button>
+              </div>
+
+              {selectedGuidance && <div className={`coordination-signal coordination-signal-${selectedGuidance.tone}`}>
+                <span className="coordination-signal-icon"><Sparkles size={17} /></span>
+                <div><div className="coordination-signal-label">NEXT COORDINATION STEP <span>Workflow-based guidance</span></div><h4>{selectedGuidance.title}</h4><p>{selectedGuidance.detail}</p></div>
+              </div>}
+
+              <div className="coordination-room-grid">
+                <section className="coordination-work-panel">
+                  <div className="coordination-section-heading"><div><span className="care-eyebrow">CONNECTED WORK</span><h4>Linked operational items</h4></div><span>{(selected.workItems ?? []).length}</span></div>
+                  {(selected.workItems ?? []).length === 0 ? <div className="coordination-empty"><ClipboardList size={17} /><span>No linked work items were returned for this request.</span></div> :
+                    <div className="coordination-work-list">{selected.workItems.map(task => <article key={task.id} className="coordination-work-item">
+                      <div className="coordination-work-item-icon"><ClipboardList size={15} /></div>
+                      <div className="coordination-work-item-main"><strong>{task.title}</strong><span>{task.reference_code} · {task.item_type.replaceAll("_", " ")}</span><div className="coordination-work-meta"><span className={`coordination-priority priority-${task.priority}`}>{task.priority} priority</span><span>{task.status.replaceAll("_", " ")}</span>{task.owner_id ? <span>Owner assigned</span> : <span className="coordination-unassigned">Unassigned</span>}</div>{task.due_at && <small className={new Date(task.due_at).getTime() < Date.now() && !["resolved","closed"].includes(task.status) ? "coordination-overdue" : ""}><Clock3 size={12} /> Due {formatDate(task.due_at)}</small>}</div>
+                      <Link href={`/work?type=${encodeURIComponent(task.item_type)}`} className="coordination-work-open" aria-label={`Open ${task.title} work queue`}><ArrowRight size={15} /></Link>
+                    </article>)}</div>}
+                </section>
+
+                <section className="coordination-timeline-panel">
+                  <div className="coordination-section-heading"><div><span className="care-eyebrow">SHARED TIMELINE</span><h4>What has happened</h4></div><span>{selectedTimeline.length}</span></div>
+                  {selectedTimeline.length === 0 ? <p className="care-muted-copy">No workflow events are available yet.</p> : <div className="coordination-timeline">{selectedTimeline.map(event => <article className={`coordination-timeline-event event-${event.kind}`} key={event.id}>
+                    <span className="coordination-timeline-dot" />
+                    <div className="coordination-timeline-content"><div className="coordination-event-heading"><strong>{event.title}</strong><time>{formatDate(event.at)}</time></div><p>{event.detail}</p></div>
+                  </article>)}</div>}
+                </section>
+              </div>
+              <p className="coordination-room-footnote"><ShieldCheck size={13} /> Guidance is derived from workflow state, not clinical judgment. Staff remain responsible for decisions and handovers.</p>
+            </section>
 
             <div className="staff-thread-section"><div className="staff-thread-heading"><div><span className="care-eyebrow">REQUEST HISTORY</span><h3>Conversation and updates</h3></div><span>{selected.messages.length} message(s)</span></div>
               {selected.messages.length === 0 && <p className="care-muted-copy">No messages have been exchanged yet.</p>}

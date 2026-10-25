@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   const patientIds = [...new Set(requests.map(row => row.patient_user_id))];
   const serviceIds = [...new Set(requests.map(row => row.service_id).filter(Boolean))] as string[];
 
-  const [profiles, services, appointments, messages] = await Promise.all([
+  const [profiles, services, appointments, messages, workItems] = await Promise.all([
     patientIds.length
       ? context.admin.from("patient_profiles").select("user_id,display_name,phone_number").in("user_id", patientIds)
       : Promise.resolve({ data: [], error: null }),
@@ -38,17 +38,33 @@ export async function GET(request: NextRequest) {
       ? context.admin.from("hospital_services").select("id,name,department").in("id", serviceIds)
       : Promise.resolve({ data: [], error: null }),
     requestIds.length
-      ? context.admin.from("appointments").select("id,patient_request_id,status,start_at,end_at,location,patient_instructions,confirmed_at")
+      ? context.admin.from("appointments").select("id,patient_request_id,status,start_at,end_at,location,patient_instructions,confirmed_at,created_at")
           .in("patient_request_id", requestIds)
       : Promise.resolve({ data: [], error: null }),
     requestIds.length
       ? context.admin.from("request_messages").select("id,patient_request_id,author_user_id,author_type,visibility,body,created_at")
           .in("patient_request_id", requestIds).order("created_at", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    requestIds.length
+      ? context.admin.from("work_items").select("id,patient_request_id,reference_code,title,summary,item_type,priority,status,owner_id,due_at,created_at,updated_at")
+          .eq("hospital_id", hospital.id).in("patient_request_id", requestIds).order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (profiles.error || services.error || appointments.error || messages.error) {
+  if (profiles.error || services.error || appointments.error || messages.error || workItems.error) {
     return NextResponse.json({ error: "Unable to load request details." }, { status: 500 });
+  }
+
+  const linkedEntityIds = [...requestIds, ...(workItems.data ?? []).map(item => item.id)];
+  const auditEvents = linkedEntityIds.length
+    ? await context.admin.from("audit_events")
+        .select("id,actor_id,entity_type,entity_id,action,details,created_at")
+        .eq("hospital_id", hospital.id)
+        .in("entity_id", linkedEntityIds)
+        .order("created_at", { ascending: true })
+    : { data: [], error: null };
+  if (auditEvents.error) {
+    return NextResponse.json({ error: "Unable to load coordination history." }, { status: 500 });
   }
 
   const profileById = new Map((profiles.data ?? []).map(item => [item.user_id, item]));
@@ -64,13 +80,22 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     hospital,
     role,
-    requests: requests.map(row => ({
-      ...row,
-      patient: profileById.get(row.patient_user_id) ?? { display_name: "Patient", phone_number: null },
-      service: serviceById.get(row.service_id) ?? null,
-      appointment: appointmentByRequest.get(row.id) ?? null,
-      messages: messagesByRequest.get(row.id) ?? [],
-    })),
+    requests: requests.map(row => {
+      const linkedWorkItems = (workItems.data ?? []).filter(item => item.patient_request_id === row.id);
+      const linkedWorkItemIds = new Set(linkedWorkItems.map(item => item.id));
+      const requestAudit = (auditEvents.data ?? []).filter(event =>
+        event.entity_id === row.id || linkedWorkItemIds.has(event.entity_id)
+      );
+      return {
+        ...row,
+        patient: profileById.get(row.patient_user_id) ?? { display_name: "Patient", phone_number: null },
+        service: serviceById.get(row.service_id) ?? null,
+        appointment: appointmentByRequest.get(row.id) ?? null,
+        messages: messagesByRequest.get(row.id) ?? [],
+        workItems: linkedWorkItems,
+        auditEvents: requestAudit,
+      };
+    }),
   });
 }
 
