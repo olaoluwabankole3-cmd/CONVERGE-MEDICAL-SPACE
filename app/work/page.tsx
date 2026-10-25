@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { getSelectedHospitalId } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -113,21 +115,31 @@ export default function WorkPage() {
       if (authError || !auth.user) { router.replace("/login"); return; }
       setUserId(auth.user.id);
 
+      const requestedHospitalId = getSelectedHospitalId();
       const { data: memberships, error: memberError } = await supabase.from("hospital_memberships")
-        .select("hospital_id,role,created_at").order("created_at", { ascending: false }).limit(10);
+        .select("hospital_id,role,created_at").order("created_at", { ascending: false }).limit(100);
       if (memberError) throw memberError;
 
       let selected: { hospital_id: string; role: string } | null = null;
-      for (const membership of memberships ?? []) {
+      if (requestedHospitalId) {
+        const membership = (memberships ?? []).find(item => item.hospital_id === requestedHospitalId);
+        if (!membership) throw new Error("You do not have access to the selected hospital workspace.");
         const { data: candidate, error: hospitalError } = await supabase.from("hospitals")
           .select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
         if (hospitalError) throw hospitalError;
-        if (candidate?.status === "active") {
-          selected = { hospital_id: membership.hospital_id, role: membership.role };
-          setHospitalId(membership.hospital_id);
-          setHospitalName(candidate.name);
-          setRole(membership.role);
-          break;
+        if (!candidate || candidate.status !== "active") throw new Error("This hospital workspace is not active.");
+        selected = { hospital_id: membership.hospital_id, role: membership.role };
+        setHospitalId(membership.hospital_id); setHospitalName(candidate.name); setRole(membership.role);
+      } else {
+        for (const membership of memberships ?? []) {
+          const { data: candidate, error: hospitalError } = await supabase.from("hospitals")
+            .select("id,name,status").eq("id", membership.hospital_id).maybeSingle();
+          if (hospitalError) throw hospitalError;
+          if (candidate?.status === "active") {
+            selected = { hospital_id: membership.hospital_id, role: membership.role };
+            setHospitalId(membership.hospital_id); setHospitalName(candidate.name); setRole(membership.role);
+            break;
+          }
         }
       }
       if (!selected) {
@@ -291,6 +303,7 @@ export default function WorkPage() {
           <Link href="/my-work" className="ops-queue-utility"><ClipboardCheck size={15} /> My work</Link>
         </div>
       </header>
+      <HospitalWorkspaceSwitcher />
 
       <div className="ops-queue-content">
         <div className="ops-queue-breadcrumb"><Link href="/">Workspace</Link><span>/</span><span>Operations</span><span>/</span><strong>{titles[type]}</strong></div>
