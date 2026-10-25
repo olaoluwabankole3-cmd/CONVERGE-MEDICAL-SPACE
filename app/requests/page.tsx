@@ -14,6 +14,17 @@ type StaffAppointment = {
 type StaffWorkItem = { id: string; patient_request_id: string; reference_code: string; title: string; summary: string | null; item_type: string; priority: string; status: string; owner_id: string | null; due_at: string | null; created_at: string; updated_at: string };
 type StaffAuditEvent = { id: number; actor_id: string | null; entity_type: string; entity_id: string; action: string; details: Record<string, unknown>; created_at: string };
 type StaffMember = { user_id: string; role: string; label: string };
+type CoordinationBrief = {
+  headline: string;
+  blockers: string[];
+  nextStep: string;
+  handoverDraft: string;
+  verifyBeforeAction: string[];
+  mode: "ai" | "rules";
+  generatedAt: string;
+  auditRecorded: boolean;
+  privacyNote: string;
+};
 type StaffHandover = {
   id: string; patient_request_id: string; work_item_id: string; from_user_id: string; to_user_id: string;
   note: string; status: "pending" | "acknowledged" | "cancelled"; created_at: string;
@@ -165,6 +176,9 @@ export default function HospitalRequestsPage() {
   const [handoverNote, setHandoverNote] = useState("");
   const [handoverWorkItemId, setHandoverWorkItemId] = useState("");
   const [handoverRecipientId, setHandoverRecipientId] = useState("");
+  const [coordinationBrief, setCoordinationBrief] = useState<CoordinationBrief | null>(null);
+  const [coordinationBriefBusy, setCoordinationBriefBusy] = useState(false);
+  const [coordinationBriefError, setCoordinationBriefError] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
   const [location, setLocation] = useState("");
@@ -195,6 +209,11 @@ export default function HospitalRequestsPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    setCoordinationBrief(null);
+    setCoordinationBriefError("");
+  }, [selectedId]);
 
   // When an operator opens a linked access case, focus its canonical patient request.
   useEffect(() => {
@@ -285,6 +304,46 @@ export default function HospitalRequestsPage() {
     } catch {
       setError("The handover brief could not be copied in this browser. You can review the coordination details on this page.");
     }
+  }
+
+  async function generateCoordinationBrief(item: StaffRequest) {
+    if (!hospital) return;
+    setCoordinationBriefBusy(true);
+    setCoordinationBriefError("");
+    setCoordinationBrief(null);
+    try {
+      const response = await fetch("/api/hospital/coordination-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hospitalId: hospital.id, requestId: item.id }),
+      });
+      const payload = await response.json();
+      if (response.status === 401) { window.location.assign("/login"); return; }
+      if (!response.ok) throw new Error(payload.error ?? "Unable to prepare a coordination brief.");
+      setCoordinationBrief(payload as CoordinationBrief);
+    } catch (cause) {
+      setCoordinationBriefError(cause instanceof Error ? cause.message : "Unable to prepare a coordination brief.");
+    } finally {
+      setCoordinationBriefBusy(false);
+    }
+  }
+
+  async function copyCoordinationDraft() {
+    if (!coordinationBrief) return;
+    try {
+      await navigator.clipboard.writeText(coordinationBrief.handoverDraft);
+      setNotice("AI-assisted handover draft copied. Review it before using it.");
+    } catch {
+      setCoordinationBriefError("This browser could not copy the draft. You can still select and copy the text directly.");
+    }
+  }
+
+  function useCoordinationHandoverDraft() {
+    if (!coordinationBrief || !selected) return;
+    setHandoverWorkItemId(handoverWorkItems[0]?.id ?? "");
+    setHandoverRecipientId("");
+    setHandoverNote(coordinationBrief.handoverDraft);
+    setShowHandover(true);
   }
 
   async function submitHandover(event: FormEvent<HTMLFormElement>) {
@@ -432,6 +491,38 @@ export default function HospitalRequestsPage() {
                 <div><div className="coordination-signal-label">NEXT COORDINATION STEP <span>Workflow-based guidance</span></div><h4>{selectedGuidance.title}</h4><p>{selectedGuidance.detail}</p></div>
               </div>}
 
+
+              <section className="coordination-assistant-panel" aria-label="AI coordination assistant">
+                <div className="coordination-assistant-heading">
+                  <span className="coordination-assistant-mark"><Sparkles size={17} /></span>
+                  <div className="coordination-assistant-heading-copy">
+                    <span className="care-eyebrow">CONVERGE INTELLIGENCE</span>
+                    <h4>AI coordination assistant</h4>
+                    <p>Understand possible workflow blockers and prepare a practical next-step brief.</p>
+                  </div>
+                  <button type="button" className="coordination-assistant-run" onClick={() => void generateCoordinationBrief(selected)} disabled={coordinationBriefBusy || !selected}>
+                    <Sparkles size={14} /> {coordinationBriefBusy ? "Reviewing…" : coordinationBrief ? "Refresh brief" : "Prepare brief"}
+                  </button>
+                </div>
+                <div className="coordination-assistant-privacy"><ShieldCheck size={13} /><span>Analysis uses workflow status, elapsed time, assignment flags and appointment state only. Patient names, contact details, request subjects, messages and clinical notes are excluded.</span></div>
+                {coordinationBriefError && <div className="coordination-assistant-error" role="alert">{coordinationBriefError}</div>}
+                {coordinationBriefBusy && <div className="coordination-assistant-loading"><span className="care-spinner" /> Checking the available operational context…</div>}
+                {!coordinationBriefBusy && !coordinationBriefError && !coordinationBrief && <p className="coordination-assistant-empty">Prepare a brief to surface potential blockers, a suggested next step and an editable handover draft. Nothing changes automatically.</p>}
+                {coordinationBrief && <div className="coordination-assistant-result">
+                  <div className="coordination-assistant-result-top"><span className="coordination-assistant-mode">{coordinationBrief.mode === "ai" ? <><Sparkles size={12} /> AI-assisted</> : <><Activity size={12} /> Rules-based fallback</>}</span><time>{formatDate(coordinationBrief.generatedAt)}</time></div>
+                  <h5>{coordinationBrief.headline}</h5>
+                  {coordinationBrief.blockers.length > 0 && <div className="coordination-assistant-blockers"><strong>Potential blockers to check</strong><ul>{coordinationBrief.blockers.map((blocker, index) => <li key={index}>{blocker}</li>)}</ul></div>}
+                  <div className="coordination-assistant-next"><strong>Suggested next step</strong><p>{coordinationBrief.nextStep}</p></div>
+                  <div className="coordination-assistant-draft"><div><strong>Handover draft</strong><span>Review and edit before sending</span></div><p>{coordinationBrief.handoverDraft}</p>
+                    <div className="coordination-assistant-draft-actions">
+                      <button type="button" className="care-button-secondary small" onClick={() => void copyCoordinationDraft()}><ClipboardList size={14} /> Copy draft</button>
+                      {handoverAvailable && canManage && !terminal.has(selected.status) && <button type="button" className="care-button-primary small" onClick={useCoordinationHandoverDraft} disabled={handoverWorkItems.length === 0 || eligibleHandoverRecipients.length === 0}><Users size={14} /> Review in handover form</button>}
+                    </div>
+                  </div>
+                  {coordinationBrief.verifyBeforeAction.length > 0 && <div className="coordination-assistant-verify"><strong>Verify before acting</strong><ul>{coordinationBrief.verifyBeforeAction.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+                  <p className="coordination-assistant-note">{coordinationBrief.mode === "ai" ? "AI-assisted operational draft; verify it against current records." : "The AI provider was unavailable or not configured, so the brief was produced from explicit workflow rules."} {coordinationBrief.auditRecorded ? "Generation was recorded in the audit trail." : "The brief was produced, but its audit event could not be recorded."}</p>
+                </div>}
+              </section>
 
               <section className="coordination-handover-panel">
                 <div className="coordination-section-heading">

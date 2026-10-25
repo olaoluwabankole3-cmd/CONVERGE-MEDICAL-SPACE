@@ -151,3 +151,8 @@ New invitees use the invitation link to set their first password at `/accept-inv
 ## Contextual staff handovers
 
 The Coordination Room can transfer a linked operational work item to another active member of the same hospital. A handover captures an internal-only note, reassigns the work item, triggers the existing in-app assignment notification, and writes audit events in one transaction. The recipient can acknowledge receipt from the linked patient request; the acknowledgement and internal activity entry are also transactional. Handover notes are never shown in the patient portal. Apply migration 15 after the existing notification/assignment migration before enabling handovers in the target Supabase project. Until that migration is applied, the existing patient request workflow remains available and the handover controls are disabled.
+
+
+## AI coordination assistant
+
+The Coordination Room includes an on-demand operational brief. The server verifies active hospital membership and reads only request type/status/timing, linked-work type/status/priority/due timing/assignment flags and appointment status/timing. Patient names, contact details, request subjects, messages, free-text instructions and clinical notes are excluded from the model payload. With `OPENAI_API_KEY` configured server-side, the assistant generates a structured explanation of potential workflow blockers, a suggested next step and an internal handover draft; otherwise, explicit rules produce a safe fallback. Generating a brief does not update operational records. Staff must review the output, verify current context and explicitly initiate any permitted action. The generation event is audited without storing generated prose.
