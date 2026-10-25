@@ -66,7 +66,7 @@ Create `.env.local` with the two public environment variables. Do not commit it.
 
 ## Database authorization tests
 
-The repository now includes a local Supabase configuration and synthetic tenant-isolation tests under `supabase/tests/tenant_isolation.test.sql`. GitHub Actions runs `supabase test db` against a fresh local database, including cross-hospital read/write denial, audit-actor checks, audit-trigger checks, and privilege checks. A passing CI run is required evidence, but it does not replace authenticated end-to-end testing and a security review of the target hospital's actual Supabase project.
+The repository includes local Supabase configuration and synthetic SQL tests in `supabase/tests/`. GitHub Actions runs `supabase test db` against a fresh local database, including cross-hospital RLS, request/appointment lifecycle transactions, role enforcement, patient/message privacy, staff handover acknowledgement, notification/audit coupling, and browser privilege checks. Use `docs/pilot-validation-checklist.md` for the authenticated manual patient-to-hospital and role-isolation checks. Passing CI is necessary evidence, but does not replace live testing against the intended Supabase project or the hospital's own security review.
 
 ## Safety boundary
 
