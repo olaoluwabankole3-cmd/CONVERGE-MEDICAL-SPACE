@@ -4,7 +4,7 @@ import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher"
 import { getSelectedHospitalId } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Activity, AlertCircle, ArrowRight, Bell, CalendarDays, CheckCircle2, ChevronDown, ClipboardCheck,
+  Activity, AlertCircle, ArrowRight, ArrowUpRight, Bell, CalendarDays, CheckCircle2, ChevronDown, ClipboardCheck,
   Clock3, FileClock, LayoutDashboard, LogOut, Search, Settings2, ShieldCheck, ChevronLeft, ChevronRight,
   Stethoscope, Users, WandSparkles, X, ClipboardList, RefreshCw
 } from "lucide-react";
