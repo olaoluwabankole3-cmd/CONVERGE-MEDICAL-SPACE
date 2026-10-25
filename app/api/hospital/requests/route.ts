@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unable to load coordination history." }, { status: 500 });
   }
 
-  const staffMembers = await Promise.all((memberships.data ?? []).map(async member => {
+  const staffMembers = await Promise.all((memberships.data ?? []).filter(member => ["owner", "admin", "clinician", "operations"].includes(member.role)).map(async member => {
     const { data } = await context.admin.auth.admin.getUserById(member.user_id);
     const email = data.user?.email ?? "";
     return { user_id: member.user_id, role: member.role, label: email || `${member.role} · ${member.user_id.slice(0, 8)}` };

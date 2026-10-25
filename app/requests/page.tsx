@@ -4,7 +4,7 @@ import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher"
 import { hospitalApiUrl } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, Clock3, MessageCircle, RefreshCw, Send, ShieldCheck, Sparkles, UserRound, XCircle } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, Clock3, MessageCircle, RefreshCw, Send, ShieldCheck, Sparkles, Users, UserRound, XCircle } from "lucide-react";
 
 type StaffMessage = { id: string; author_user_id: string; author_type: string; visibility: string; body: string; created_at: string };
 type StaffAppointment = {

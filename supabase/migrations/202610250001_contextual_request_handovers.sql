@@ -62,7 +62,6 @@ declare
   previous_handover public.request_handovers%rowtype;
   actor_can_manage boolean := false;
   recipient_is_member boolean := false;
-  request_is_active boolean := false;
 begin
   if p_actor_user_id is null or p_hospital_id is null or p_patient_request_id is null
      or p_work_item_id is null or p_recipient_user_id is null then
@@ -94,7 +93,7 @@ begin
     join public.hospitals h on h.id = m.hospital_id
     where m.hospital_id = p_hospital_id
       and m.user_id = p_recipient_user_id
-      and m.role in ('owner', 'admin', 'clinician', 'operations', 'reviewer')
+      and m.role in ('owner', 'admin', 'clinician', 'operations')
       and h.status = 'active'
   ) into recipient_is_member;
   if not coalesce(recipient_is_member, false) then
