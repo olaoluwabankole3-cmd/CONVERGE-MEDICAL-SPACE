@@ -81,6 +81,7 @@ export default function WorkPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [selectedItem, setSelectedItem] = useState<Row | null>(null);
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const [newReference, setNewReference] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newSummary, setNewSummary] = useState("");
@@ -166,6 +167,17 @@ export default function WorkPage() {
   }, [router, supabase, type]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (loading || deepLinkHandled) return;
+    const requestedItemId = new URLSearchParams(window.location.search).get("itemId");
+    if (!requestedItemId) { setDeepLinkHandled(true); return; }
+    const requestedItem = items.find(item => item.id === requestedItemId);
+    if (!requestedItem) return;
+    setSelectedItem(requestedItem);
+    setStatus("all");
+    setDeepLinkHandled(true);
+  }, [items, loading, deepLinkHandled]);
 
   const visible = useMemo(() => items.filter(item => {
     const matchesStatus = status === "all" || item.status === status || (status === "open" && !["resolved", "closed"].includes(item.status));

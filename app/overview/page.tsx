@@ -22,6 +22,9 @@ type DbWorkItem = {
 };
 type WorkItem = DbWorkItem & { owner: string; typeLabel: string; statusLabel: string; tone: string; priorityLabel: string };
 type AuditEvent = { id: number; entity_type: string; entity_id: string; action: string; details: Record<string, unknown>; created_at: string };
+type PulseSignal = { id: string; source: "request" | "appointment" | "work_item"; severity: "urgent" | "attention" | "watch"; title: string; detail: string; ageLabel: string; href: string; reason: string };
+type PulseSummary = { requestsNeedingAction: number; appointmentsAwaitingConfirmation: number; overdueWork: number; unassignedWork: number };
+const EMPTY_PULSE_SUMMARY: PulseSummary = { requestsNeedingAction: 0, appointmentsAwaitingConfirmation: 0, overdueWork: 0, unassignedWork: 0 };
 
 const TYPE_LABELS: Record<WorkType, string> = { access_case: "Access case", appointment: "Appointment", follow_up: "Follow-up", exception: "Exception", task: "Task" };
 const STATUS_LABELS: Record<WorkStatus, string> = { draft: "Draft", open: "Open", needs_review: "Needs review", in_progress: "In progress", awaiting_response: "Awaiting response", resolved: "Resolved", closed: "Closed" };
@@ -53,6 +56,10 @@ export default function Home() {
   const [role, setRole] = useState("member");
   const [items, setItems] = useState<WorkItem[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [pulseSignals, setPulseSignals] = useState<PulseSignal[]>([]);
+  const [pulseSummary, setPulseSummary] = useState<PulseSummary>(EMPTY_PULSE_SUMMARY);
+  const [pulseLoading, setPulseLoading] = useState(true);
+  const [pulseError, setPulseError] = useState("");
   const [filter, setFilter] = useState("All items");
   const [selected, setSelected] = useState<WorkItem | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -139,6 +146,7 @@ export default function Home() {
       if (!selectedHospital || selectedHospital.status !== "active") {
         setItems([]);
         setAuditEvents([]);
+        setPulseSignals([]); setPulseSummary(EMPTY_PULSE_SUMMARY); setPulseError(""); setPulseLoading(false);
         setSelected(null);
         setLoading(false);
         return;
@@ -160,6 +168,23 @@ export default function Home() {
       if (eventsError) throw eventsError;
       setAuditEvents((events ?? []) as AuditEvent[]);
       setSelected((current) => current ? mapped.find((item) => item.id === current.id) ?? null : null);
+
+      // Hospital Pulse is a minimal, server-scoped operational signal feed.
+      // Failure here does not hide the existing dashboard or work queue.
+      setPulseLoading(true);
+      setPulseError("");
+      try {
+        const pulseResponse = await fetch(`/api/hospital/pulse?hospitalId=${encodeURIComponent(selectedHospital.id)}`, { cache: "no-store" });
+        const pulsePayload = await pulseResponse.json();
+        if (!pulseResponse.ok) throw new Error(pulsePayload.error ?? "Unable to load coordination signals.");
+        setPulseSignals((pulsePayload.signals ?? []) as PulseSignal[]);
+        setPulseSummary({ ...EMPTY_PULSE_SUMMARY, ...(pulsePayload.summary ?? {}) });
+      } catch (pulseCause) {
+        setPulseSignals([]);
+        setPulseError(pulseCause instanceof Error ? pulseCause.message : "Coordination signals are temporarily unavailable.");
+      } finally {
+        setPulseLoading(false);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load your hospital workspace.");
     } finally {
@@ -334,6 +359,36 @@ export default function Home() {
           {notice && <div className="notice"><div className="notice-icon"><CheckCircle2 size={19} /></div><div><strong>Saved successfully</strong><p>{notice}</p></div><button className="notice-dismiss" onClick={() => setNotice("")} aria-label="Dismiss message"><X size={16} /></button></div>}
           {!loading && (!hospital || hospital.status !== "active") && <section className="panel onboarding-state"><div className="notice-icon"><ShieldCheck size={22} /></div><div><h2>{!hospital ? "No hospital workspace found" : hospital.status === "pending" ? "Hospital registration awaiting approval" : hospital.status === "rejected" ? "Hospital registration was not approved" : "Hospital workspace is suspended"}</h2><p>{!hospital ? "Sign in and register your hospital before creating operational records." : hospital.status === "pending" ? "Your registration has been received. The workspace will become available after an authorised administrator approves it." : hospital.status === "rejected" ? "Please contact the platform administrator for the next steps." : "This workspace is not currently available. Contact the platform administrator."}</p><div className="onboarding-actions">{!hospital && <button className="primary-button" onClick={() => router.push("/onboarding")}>Register hospital <ArrowRight size={15} /></button>}<button className="secondary-button" onClick={signOut}>Sign out</button></div></div></section>}
           <section className="metrics-grid" aria-label="Operational summary">{metrics.map((metric) => { const Icon = metric.icon; return <article className="metric-card" key={metric.label}><div className="metric-top"><span>{metric.label}</span><div className={`metric-icon ${metric.tone}`}><Icon size={18} /></div></div><div className="metric-value">{loading ? "—" : metric.value}</div><div className={`metric-delta ${metric.tone}`}>{metric.note}</div></article>; })}</section>
+<section className="panel hospital-pulse-panel" aria-labelledby="hospital-pulse-title">
+            <div className="hospital-pulse-heading">
+              <div className="hospital-pulse-title-group">
+                <span className="hospital-pulse-mark"><Activity size={18} /></span>
+                <div><span className="hospital-pulse-overline">CONVERGE · HOSPITAL PULSE</span><h2 id="hospital-pulse-title">What needs coordination now?</h2><p>Operational signals ranked by urgency, waiting time and ownership gaps.</p></div>
+              </div>
+              <div className="hospital-pulse-heading-actions"><span className="pulse-live-indicator"><i /> Rules-based · current records</span><button type="button" className="pulse-refresh-button" onClick={() => void loadWorkspace()} disabled={loading}><RefreshCw size={14} /> Refresh pulse</button></div>
+            </div>
+            <div className="hospital-pulse-summary">
+              <div className="pulse-summary-stat"><span>Requests needing action</span><strong>{loading || pulseLoading ? "—" : pulseSummary.requestsNeedingAction}</strong></div>
+              <div className="pulse-summary-stat"><span>Appointments to confirm</span><strong>{loading || pulseLoading ? "—" : pulseSummary.appointmentsAwaitingConfirmation}</strong></div>
+              <div className="pulse-summary-stat"><span>Overdue work</span><strong>{loading ? "—" : pulseSummary.overdueWork}</strong></div>
+              <div className="pulse-summary-stat"><span>Unassigned work</span><strong>{loading ? "—" : pulseSummary.unassignedWork}</strong></div>
+            </div>
+            <div className="hospital-pulse-list-heading"><span>PRIORITY SIGNALS</span><span>{pulseLoading ? "Checking…" : `${pulseSignals.length} shown`}</span></div>
+            {pulseError && <div className="pulse-inline-error"><AlertCircle size={15} /><span>Request and appointment signals could not be loaded: {pulseError} The rest of the workspace remains available.</span></div>}
+            {pulseLoading && <div className="pulse-state"><span className="care-spinner" /> Checking hospital workflow signals…</div>}
+            {!pulseLoading && !pulseError && pulseSignals.length === 0 && <div className="pulse-clear-state"><span><CheckCircle2 size={18} /></span><div><strong>No immediate coordination blockers surfaced</strong><p>That does not mean every task is complete. Continue monitoring the work queue and upcoming deadlines.</p></div></div>}
+            {!pulseLoading && pulseSignals.length > 0 && <div className="hospital-pulse-signals">
+              {pulseSignals.slice(0, 7).map(signal => {
+                const SignalIcon = signal.source === "appointment" ? CalendarDays : signal.source === "request" ? Clock3 : signal.severity === "urgent" ? AlertCircle : ClipboardList;
+                return <a className={`hospital-pulse-signal pulse-severity-${signal.severity}`} href={signal.href} key={signal.id}>
+                  <span className="pulse-signal-icon"><SignalIcon size={17} /></span>
+                  <span className="pulse-signal-copy"><span className="pulse-signal-label">{signal.source === "appointment" ? "APPOINTMENT" : signal.source === "request" ? "PATIENT REQUEST" : "OPERATIONAL WORK"}<i />{signal.severity === "urgent" ? "Urgent attention" : signal.severity === "attention" ? "Needs attention" : "Monitor"}</span><strong>{signal.title}</strong><span className="pulse-signal-detail">{signal.detail}</span><span className="pulse-signal-reason">{signal.reason}</span></span>
+                  <span className="pulse-signal-age">{signal.ageLabel}<ArrowUpRight size={15} /></span>
+                </a>;
+              })}
+            </div>}
+            <div className="hospital-pulse-footnote"><ShieldCheck size={14} /><span>Workflow guidance only. Signals explain delays and ownership gaps; they do not assess clinical urgency or replace staff judgment.</span><a href="/requests">Open request inbox <ArrowRight size={13} /></a></div>
+          </section>
           <div className="content-grid">
             <section className="panel work-panel" id="work">
               <div className="panel-heading"><div><h2>Operational work queue</h2><p>Persisted work items in your authorised hospital workspace</p></div><button className="text-button" onClick={() => { setFilter("All items"); setSearch(""); }}>Reset view <ArrowRight size={15} /></button></div>
@@ -343,7 +398,7 @@ export default function Home() {
             </section>
             <aside className="right-column">
               {selected && <section className="panel details-panel"><div className="panel-heading"><div><h2>Selected item</h2><p>Contextual record details</p></div><div style={{ display: "flex", gap: 6 }}><button className="text-button" onClick={openEditItem} disabled={saving}>Edit</button><button className="icon-button subtle" onClick={() => setSelected(null)} aria-label="Close selected item"><X size={16} /></button></div></div><div className="detail-body"><Pill tone={selected.tone}>{selected.statusLabel}</Pill><h3>{selected.title}</h3><p className="detail-reference">{selected.reference_code} · Created {formatDate(selected.created_at)}</p>{selected.summary && <p className="detail-summary">{selected.summary}</p>}<dl><div><dt>Work type</dt><dd>{selected.typeLabel}</dd></div><div><dt>Owner</dt><dd>{selected.owner}</dd></div><div><dt>Priority</dt><dd>{selected.priorityLabel}</dd></div><div><dt>Due date</dt><dd>{selected.due_at ? formatDate(selected.due_at) : "No due date"}</dd></div><div><dt>External reference</dt><dd>{selected.external_reference || "Not supplied"}</dd></div><div><dt>Last updated</dt><dd>{formatDate(selected.updated_at)}</dd></div></dl><label className="status-field">Update due date<input type="date" value={selected.due_at ? new Date(selected.due_at).toISOString().slice(0, 10) : ""} disabled={saving} onChange={(e) => void updateDueDate(e.target.value)} /></label><label className="status-field">Update status<select value={selected.status} disabled={saving} onChange={(e) => void updateStatus(e.target.value as WorkStatus)}>{(["draft", ...ALLOWED_STATUSES] as WorkStatus[]).map(status => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}</select></label><p className="detail-note">Keep references operational and minimal. Do not store unnecessary patient-identifying information in work-item titles or summaries.</p></div></section>}
-              <section className="panel focus-panel" id="attention"><div className="panel-heading"><div><h2>Needs attention</h2><p>Calculated from saved work items</p></div><span className="attention-count">{items.filter(i => ["needs_review", "awaiting_response"].includes(i.status) && !["resolved", "closed"].includes(i.status)).length}</span></div><div className="attention-item"><div className="attention-symbol rose"><AlertCircle size={17} /></div><div><strong>High-priority exceptions</strong><p>{items.filter(i => i.item_type === "exception" && ["high", "urgent"].includes(i.priority) && !["resolved", "closed"].includes(i.status)).length} open exception(s) need operational review</p><button className="inline-link" onClick={() => { setFilter("All items"); setSearch("EX-"); }}>Review exceptions <ArrowRight size={13} /></button></div></div><div className="attention-item"><div className="attention-symbol amber"><Clock3 size={17} /></div><div><strong>Overdue follow-ups</strong><p>{items.filter(i => i.item_type === "follow_up" && i.due_at && new Date(i.due_at) < new Date() && !["resolved", "closed"].includes(i.status)).length} follow-up(s) past due</p><button className="inline-link" onClick={() => { setFilter("All items"); setSearch("follow-up"); }}>Review follow-ups <ArrowRight size={13} /></button></div></div><div className="attention-item"><div className="attention-symbol violet"><ShieldCheck size={17} /></div><div><strong>Workspace access</strong><p>{hospital?.status === "active" ? `Hospital active · role: ${role}` : "Hospital approval is required before operations can begin."}</p><button className="inline-link" onClick={() => router.push("/onboarding")}>Workspace details <ArrowRight size={13} /></button></div></div></section>
+              
               <section className="panel activity-panel" id="activity"><div className="panel-heading"><div><h2>Recent activity</h2><p>Recorded workspace events</p></div><button className="icon-button subtle" onClick={() => void loadWorkspace()} aria-label="Refresh activity"><RefreshCw size={15} /></button></div><div className="activity-list">{auditEvents.map(event => { const details = event.details ?? {}; const reference = typeof details.reference_code === "string" ? details.reference_code : event.entity_id.slice(0, 8); const actionLabel = event.action === "status_changed" ? "Status changed" : event.action === "created" ? "Work item created" : event.action.replaceAll("_", " "); return <div className="activity-entry" key={event.id}><div className="activity-icon"><ClipboardList size={16} /></div><div className="activity-copy"><strong>{reference} · {actionLabel}</strong><p>{event.entity_type.replaceAll("_", " ")} · recorded event</p><span>{formatDate(event.created_at)} · {new Date(event.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span></div></div>; })}{!loading && auditEvents.length === 0 && <div className="empty-state">No audit events have been recorded yet.</div>}</div><button className="text-button activity-link" onClick={() => void loadWorkspace()}>Refresh audit events <ArrowRight size={15} /></button></section>
               <section className="ai-card" id="ai"><div className="ai-card-top"><div className="ai-mark"><WandSparkles size={19} /></div><Pill tone="violet">Governed AI</Pill></div><h2>AI support, with oversight.</h2><p>The operations analyst reviews aggregate workflow signals and helps authorised staff turn reviewed recommendations into auditable follow-up tasks.</p><button className="ai-link" onClick={() => router.push("/ai-agents")}>Open operations analyst <ArrowRight size={15} /></button></section>
             </aside>

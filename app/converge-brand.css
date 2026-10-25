@@ -1909,3 +1909,94 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
   .coordination-event-heading { flex-direction:column; gap:.12rem; }
   .coordination-event-heading time { white-space:normal; }
 }
+
+
+/* Hospital Pulse — exception-led coordination overview */
+.hospital-pulse-panel {
+  margin: 0 0 20px;
+  border: 1px solid rgba(164, 237, 193, .18);
+  border-radius: 15px;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(74, 147, 98, .10), transparent 42%),
+    linear-gradient(145deg, #111c16, #0f1713 72%, #101914);
+  color: #edf5ef;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(229, 255, 237, .025), 0 10px 30px rgba(0, 0, 0, .08);
+}
+.hospital-pulse-heading {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:1rem;
+  padding: 21px 22px 17px;
+}
+.hospital-pulse-title-group { display:flex; align-items:flex-start; gap:12px; min-width:0; }
+.hospital-pulse-mark { display:grid; place-items:center; flex:0 0 38px; width:38px; height:38px; border:1px solid rgba(164,237,193,.18); border-radius:12px; color:#a4edc1; background:rgba(164,237,193,.085); }
+.hospital-pulse-overline { display:block; margin:1px 0 5px; color:#9fdbb0; font-size:9px; font-weight:750; letter-spacing:1.4px; }
+.hospital-pulse-title-group h2 { margin:0; color:#f0f7f1; font-size:17px; font-weight:650; line-height:1.3; letter-spacing:-.45px; }
+.hospital-pulse-title-group p { margin:6px 0 0; color:#91a399; font-size:11px; line-height:1.5; }
+.hospital-pulse-heading-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+.pulse-live-indicator { display:inline-flex; align-items:center; gap:6px; color:#91b79c; font-size:9px; white-space:nowrap; }
+.pulse-live-indicator i { width:6px; height:6px; border-radius:50%; background:#8cdbab; box-shadow:0 0 0 3px rgba(140,219,171,.1); }
+.pulse-refresh-button { display:inline-flex; align-items:center; gap:6px; padding:8px 10px; color:#c2e8ce; background:rgba(164,237,193,.05); border:1px solid rgba(164,237,193,.18); border-radius:8px; font-size:10px; font-weight:600; white-space:nowrap; }
+.pulse-refresh-button:hover { border-color:rgba(164,237,193,.38); background:rgba(164,237,193,.09); }
+.pulse-refresh-button:disabled { opacity:.55; cursor:wait; }
+.hospital-pulse-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:0 22px; border:1px solid rgba(183,222,193,.1); border-radius:11px; background:rgba(4,11,7,.16); overflow:hidden; }
+.pulse-summary-stat { display:flex; flex-direction:column; gap:8px; min-width:0; padding:12px 15px; border-right:1px solid rgba(183,222,193,.1); }
+.pulse-summary-stat:last-child { border-right:0; }
+.pulse-summary-stat span { color:#92a399; font-size:10px; line-height:1.4; }
+.pulse-summary-stat strong { color:#eaf6ed; font-size:22px; font-weight:650; letter-spacing:-.6px; }
+.hospital-pulse-list-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px 22px 9px; color:#7d9886; font-size:9px; font-weight:750; letter-spacing:1.25px; }
+.hospital-pulse-list-heading span:last-child { color:#83958a; font-weight:550; letter-spacing:0; }
+.hospital-pulse-signals { padding:0 22px 8px; display:flex; flex-direction:column; }
+.hospital-pulse-signal { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:11px; align-items:center; padding:13px 0; border-bottom:1px solid rgba(183,222,193,.09); text-decoration:none; min-width:0; }
+.hospital-pulse-signal:last-child { border-bottom:0; }
+.hospital-pulse-signal:hover .pulse-signal-copy > strong { color:#b7f0c8; }
+.hospital-pulse-signal:hover .pulse-signal-age { color:#b5e9c3; }
+.pulse-signal-icon { display:grid; place-items:center; width:33px; height:33px; border-radius:10px; color:#a6d9b3; background:rgba(164,237,193,.07); border:1px solid rgba(164,237,193,.1); }
+.pulse-severity-urgent .pulse-signal-icon { color:#f1bd90; background:rgba(209,125,72,.09); border-color:rgba(241,189,144,.17); }
+.pulse-severity-attention .pulse-signal-icon { color:#e8d094; background:rgba(212,177,99,.07); border-color:rgba(232,208,148,.13); }
+.pulse-signal-copy { display:flex; flex-direction:column; min-width:0; gap:4px; }
+.pulse-signal-label { display:flex; align-items:center; flex-wrap:wrap; gap:6px; color:#86a28f; font-size:8px; font-weight:750; letter-spacing:.7px; }
+.pulse-signal-label i { width:3px; height:3px; border-radius:50%; background:#516b58; }
+.pulse-severity-urgent .pulse-signal-label { color:#e6b38e; }
+.pulse-severity-attention .pulse-signal-label { color:#d7c18a; }
+.pulse-signal-copy > strong { color:#e2eee5; font-size:11px; font-weight:650; line-height:1.45; overflow-wrap:anywhere; transition:color .15s ease; }
+.pulse-signal-detail { color:#a0b0a4; font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
+.pulse-signal-reason { color:#72887a; font-size:9px; line-height:1.45; }
+.pulse-signal-age { display:flex; align-items:center; justify-content:flex-end; gap:6px; color:#84978a; font-size:9px; white-space:nowrap; }
+.pulse-inline-error { display:flex; align-items:flex-start; gap:8px; margin:0 22px 12px; padding:10px 11px; border:1px solid rgba(229,153,118,.2); border-radius:8px; color:#e2ae91; background:rgba(117,52,30,.1); font-size:10px; line-height:1.5; }
+.pulse-inline-error svg { flex:0 0 auto; margin-top:1px; }
+.pulse-state { display:flex; align-items:center; gap:9px; padding:16px 22px 20px; color:#9eb0a2; font-size:11px; }
+.pulse-clear-state { display:flex; align-items:center; gap:11px; padding:15px 22px 20px; }
+.pulse-clear-state > span { display:grid; place-items:center; width:31px; height:31px; flex:0 0 31px; border-radius:9px; background:rgba(164,237,193,.08); color:#a4edc1; }
+.pulse-clear-state strong { display:block; color:#e6f3e9; font-size:11px; font-weight:650; }
+.pulse-clear-state p { margin:4px 0 0; color:#91a297; font-size:10px; line-height:1.5; }
+.hospital-pulse-footnote { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px 22px; border-top:1px solid rgba(183,222,193,.09); color:#829388; font-size:9px; line-height:1.45; }
+.hospital-pulse-footnote > svg { flex:0 0 auto; color:#90b89a; }
+.hospital-pulse-footnote > span { flex:1; min-width:220px; }
+.hospital-pulse-footnote a { display:inline-flex; align-items:center; gap:5px; color:#a8dfb8; font-size:9px; font-weight:650; white-space:nowrap; }
+.hospital-pulse-footnote a:hover { color:#d3f8dd; }
+@media (max-width: 980px) {
+  .hospital-pulse-heading { flex-direction:column; }
+  .hospital-pulse-heading-actions { width:100%; justify-content:space-between; }
+}
+@media (max-width: 640px) {
+  .hospital-pulse-heading { padding:17px 15px 14px; }
+  .hospital-pulse-title-group { gap:9px; }
+  .hospital-pulse-title-group h2 { font-size:15px; }
+  .hospital-pulse-title-group p { font-size:10px; }
+  .hospital-pulse-summary { grid-template-columns:repeat(2,minmax(0,1fr)); margin:0 15px; }
+  .pulse-summary-stat { padding:10px 12px; }
+  .pulse-summary-stat:nth-child(2) { border-right:0; }
+  .pulse-summary-stat:nth-child(-n+2) { border-bottom:1px solid rgba(183,222,193,.1); }
+  .pulse-summary-stat strong { font-size:20px; }
+  .hospital-pulse-list-heading { padding:15px 15px 8px; }
+  .hospital-pulse-signals { padding:0 15px 7px; }
+  .hospital-pulse-signal { grid-template-columns:29px minmax(0,1fr); gap:9px; padding:12px 0; }
+  .pulse-signal-icon { width:29px; height:29px; border-radius:8px; }
+  .pulse-signal-age { grid-column:2; justify-content:flex-start; font-size:8px; margin-top:1px; }
+  .hospital-pulse-footnote { align-items:flex-start; padding:11px 15px; gap:7px; }
+  .hospital-pulse-footnote > span { min-width:0; }
+  .pulse-live-indicator { font-size:8px; }
+}
