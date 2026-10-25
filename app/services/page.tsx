@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { hospitalApiUrl } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, Plus, RefreshCw, ShieldCheck, Stethoscope } from "lucide-react";
@@ -27,7 +29,7 @@ export default function HospitalServicesPage() {
     if (showLoading) setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/hospital/services", { cache: "no-store" });
+      const response = await fetch(hospitalApiUrl("/api/hospital/services"), { cache: "no-store" });
       const payload = await response.json();
       if (response.status === 401) { window.location.assign("/login"); return; }
       if (!response.ok) throw new Error(payload.error ?? "Unable to load hospital services.");
@@ -100,6 +102,7 @@ export default function HospitalServicesPage() {
         <Link href="/" className="care-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" /></Link>
         <nav className="care-header-actions"><Link href="/requests" className="care-nav-link">Patient requests</Link><Link href="/" className="care-nav-primary"><ArrowLeft size={15} /> Hospital workspace</Link></nav>
       </header>
+      <HospitalWorkspaceSwitcher />
 
       <section className="care-workspace-heading">
         <Link href="/" className="care-back-link"><ArrowLeft size={14} /> Overview</Link>
