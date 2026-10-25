@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { getSelectedHospitalId } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, AlertCircle, ArrowRight, Bell, CalendarDays, CheckCircle2, ChevronDown, ClipboardCheck,
@@ -95,15 +97,21 @@ export default function Home() {
       let selectedHospital: Hospital | null = null;
       let membershipRole = "owner";
       let hasActiveMembership = false;
+      const requestedHospitalId = getSelectedHospitalId();
 
       const { data: memberships, error: membershipError } = await supabase
         .from("hospital_memberships")
         .select("hospital_id,role,created_at")
         .order("created_at", { ascending: false })
-        .limit(1);
+        .limit(100);
       if (membershipError) throw membershipError;
 
-      const membership = memberships?.[0];
+      const membership = requestedHospitalId
+        ? (memberships ?? []).find(item => item.hospital_id === requestedHospitalId)
+        : memberships?.[0];
+      if (requestedHospitalId && !membership) {
+        throw new Error("You do not have access to the selected hospital workspace.");
+      }
       if (membership) {
         membershipRole = membership.role;
         const { data: memberHospital, error: hospitalError } = await supabase
@@ -319,6 +327,7 @@ export default function Home() {
 
       <section className="main-area">
         <header className="topbar"><div className="topbar-leading"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Overview</strong></div></div><div className="topbar-actions"><div className="demo-badge"><span /> {hospital?.status === "active" ? "Live workspace" : "Setup required"}</div><label className="search-box"><Search size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search work items" aria-label="Search work items" /></label><button className="dashboard-signin" onClick={() => void loadWorkspace()} disabled={loading}><RefreshCw size={14} /> Refresh</button></div></header>
+        <HospitalWorkspaceSwitcher />
         <div className="page-content">
           <div className="page-heading"><div><div className="eyebrow">{new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date()).toUpperCase()} <span className="eyebrow-line" /></div><h1>{hospital?.status === "active" ? "Your operations, at a glance." : "Set up your hospital workspace."}</h1><p>{hospital?.status === "active" ? "A live view of the operational work your team is coordinating." : "Complete the hospital approval process to begin managing operational work."}</p></div><button className="primary-button" onClick={() => setShowCreate(true)} disabled={!hospital || hospital.status !== "active"}><span>+</span> Create work item</button></div>
           {error && <div className="notice error-notice"><div className="notice-icon"><AlertCircle size={19} /></div><div><strong>Something needs attention</strong><p>{error}</p></div><button className="notice-dismiss" onClick={() => setError("")} aria-label="Dismiss error"><X size={16} /></button></div>}
