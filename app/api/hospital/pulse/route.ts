@@ -31,8 +31,6 @@ function durationLabel(hours: number): string {
 }
 
 const terminalWorkStatuses = new Set(["resolved", "closed", "draft"]);
-const terminalRequestStatuses = new Set(["completed", "no_show", "cancelled", "declined"]);
-
 export async function GET(request: NextRequest) {
   const context = await getAuthenticatedAdminContext();
   if ("response" in context) return context.response;
@@ -50,7 +48,7 @@ export async function GET(request: NextRequest) {
       .select("id,request_code,status,request_type,submitted_at,updated_at")
       .eq("hospital_id", hospital.id).order("created_at", { ascending: false }).limit(200),
     context.admin.from("appointments")
-      .select("id,patient_request_id,status,start_at,end_at,confirmed_at")
+      .select("id,patient_request_id,status,start_at,end_at,confirmed_at,created_at")
       .eq("hospital_id", hospital.id).order("created_at", { ascending: false }).limit(200),
   ]);
 
@@ -63,7 +61,6 @@ export async function GET(request: NextRequest) {
   const requests = requestResult.data ?? [];
   const appointments = appointmentResult.data ?? [];
   const requestsById = new Map(requests.map(row => [row.id, row]));
-  const appointmentsByRequest = new Map(appointments.map(row => [row.patient_request_id, row]));
   const signals: Signal[] = [];
 
   const activeWork = workItems.filter(row => !terminalWorkStatuses.has(row.status));
@@ -132,7 +129,7 @@ export async function GET(request: NextRequest) {
 
   for (const appointment of appointmentsAwaitingConfirmation) {
     const patientRequest = requestsById.get(appointment.patient_request_id);
-    const ageHours = hoursSince(appointment.confirmed_at, now) || hoursSince(appointment.start_at, now);
+    const ageHours = hoursSince(appointment.created_at, now);
     signals.push({
       id: `appointment-${appointment.id}`, source: "appointment",
       severity: appointment.start_at && new Date(appointment.start_at).getTime() < now ? "urgent" : "attention",
