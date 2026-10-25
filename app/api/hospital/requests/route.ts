@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   const patientIds = [...new Set(requests.map(row => row.patient_user_id))];
   const serviceIds = [...new Set(requests.map(row => row.service_id).filter(Boolean))] as string[];
 
-  const [profiles, services, appointments, messages, workItems] = await Promise.all([
+  const [profiles, services, appointments, messages, workItems, memberships] = await Promise.all([
     patientIds.length
       ? context.admin.from("patient_profiles").select("user_id,display_name,phone_number").in("user_id", patientIds)
       : Promise.resolve({ data: [], error: null }),
@@ -49,13 +49,31 @@ export async function GET(request: NextRequest) {
       ? context.admin.from("work_items").select("id,patient_request_id,reference_code,title,summary,item_type,priority,status,owner_id,due_at,created_at,updated_at")
           .eq("hospital_id", hospital.id).in("patient_request_id", requestIds).order("created_at", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    context.admin.from("hospital_memberships").select("user_id,role").eq("hospital_id", hospital.id).order("created_at", { ascending: true }),
   ]);
 
-  if (profiles.error || services.error || appointments.error || messages.error || workItems.error) {
+  if (profiles.error || services.error || appointments.error || messages.error || workItems.error || memberships.error) {
     return NextResponse.json({ error: "Unable to load request details." }, { status: 500 });
   }
 
-  const linkedEntityIds = [...requestIds, ...(workItems.data ?? []).map(item => item.id)];
+  const handoverResult = requestIds.length
+    ? await context.admin.from("request_handovers")
+        .select("id,hospital_id,patient_request_id,work_item_id,from_user_id,to_user_id,note,status,created_at,acknowledged_at,acknowledged_by")
+        .eq("hospital_id", hospital.id).in("patient_request_id", requestIds).order("created_at", { ascending: false })
+    : { data: [], error: null };
+  const handoverAvailable = !handoverResult.error;
+  const missingHandoverMigration = handoverResult.error?.code === "PGRST205"
+    || handoverResult.error?.code === "42P01";
+  if (handoverResult.error && !missingHandoverMigration) {
+    return NextResponse.json({ error: "Unable to load staff handovers. Check the hospital database migration." }, { status: 500 });
+  }
+  const handoverRows = handoverAvailable ? (handoverResult.data ?? []) : [];
+
+  const linkedEntityIds = [
+    ...requestIds,
+    ...(workItems.data ?? []).map(item => item.id),
+    ...handoverRows.map(item => item.id),
+  ];
   const auditEvents = linkedEntityIds.length
     ? await context.admin.from("audit_events")
         .select("id,actor_id,entity_type,entity_id,action,details,created_at")
@@ -65,6 +83,24 @@ export async function GET(request: NextRequest) {
     : { data: [], error: null };
   if (auditEvents.error) {
     return NextResponse.json({ error: "Unable to load coordination history." }, { status: 500 });
+  }
+
+  const staffMembers = await Promise.all((memberships.data ?? []).map(async member => {
+    const { data } = await context.admin.auth.admin.getUserById(member.user_id);
+    const email = data.user?.email ?? "";
+    return { user_id: member.user_id, role: member.role, label: email || `${member.role} · ${member.user_id.slice(0, 8)}` };
+  }));
+  const staffById = new Map(staffMembers.map(member => [member.user_id, member.label]));
+  const handoversByRequest = new Map<string, Array<Record<string, unknown>>>();
+  for (const handover of handoverRows) {
+    const enriched = {
+      ...handover,
+      from_label: staffById.get(handover.from_user_id) ?? "Hospital staff",
+      to_label: staffById.get(handover.to_user_id) ?? "Hospital staff",
+    };
+    const list = handoversByRequest.get(handover.patient_request_id) ?? [];
+    list.push(enriched);
+    handoversByRequest.set(handover.patient_request_id, list);
   }
 
   const profileById = new Map((profiles.data ?? []).map(item => [item.user_id, item]));
@@ -83,8 +119,9 @@ export async function GET(request: NextRequest) {
     requests: requests.map(row => {
       const linkedWorkItems = (workItems.data ?? []).filter(item => item.patient_request_id === row.id);
       const linkedWorkItemIds = new Set(linkedWorkItems.map(item => item.id));
+      const linkedHandoverIds = new Set((handoversByRequest.get(row.id) ?? []).map(item => item.id));
       const requestAudit = (auditEvents.data ?? []).filter(event =>
-        event.entity_id === row.id || linkedWorkItemIds.has(event.entity_id)
+        event.entity_id === row.id || linkedWorkItemIds.has(event.entity_id) || linkedHandoverIds.has(event.entity_id)
       );
       return {
         ...row,
@@ -94,8 +131,12 @@ export async function GET(request: NextRequest) {
         messages: messagesByRequest.get(row.id) ?? [],
         workItems: linkedWorkItems,
         auditEvents: requestAudit,
+        handovers: handoversByRequest.get(row.id) ?? [],
       };
     }),
+    userId: context.user.id,
+    staffMembers,
+    handoverAvailable,
   });
 }
 
@@ -122,6 +163,7 @@ export async function PATCH(request: NextRequest) {
   const actions = new Set([
     "start_review", "ask_patient", "propose_appointment", "confirm_appointment",
     "decline_request", "complete_request", "approve_cancellation", "reject_cancellation",
+    "handover_request", "acknowledge_handover",
   ]);
   if (!hospitalId || !requestId || !actions.has(action)) {
     return NextResponse.json({ error: "Choose a valid request action and hospital." }, { status: 400 });
@@ -145,6 +187,56 @@ export async function PATCH(request: NextRequest) {
   if ("response" in resolved) return resolved.response;
   if (!["owner", "admin", "clinician", "operations"].includes(resolved.role)) {
     return NextResponse.json({ error: "Your hospital role is read-only for request actions." }, { status: 403 });
+  }
+
+  if (action === "handover_request") {
+    const workItemId = typeof body.workItemId === "string" ? body.workItemId : "";
+    const recipientUserId = typeof body.recipientUserId === "string" ? body.recipientUserId : "";
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(workItemId) || !uuidPattern.test(recipientUserId)) {
+      return NextResponse.json({ error: "Choose a valid linked work item and receiving staff member." }, { status: 400 });
+    }
+    if (message.length < 5 || message.length > 2000) {
+      return NextResponse.json({ error: "Add a handover note between 5 and 2000 characters." }, { status: 400 });
+    }
+    const { data: handover, error: handoverError } = await context.admin.rpc("record_patient_request_handover", {
+      p_actor_user_id: context.user.id,
+      p_hospital_id: resolved.hospital.id,
+      p_patient_request_id: requestId,
+      p_work_item_id: workItemId,
+      p_recipient_user_id: recipientUserId,
+      p_note: message,
+    });
+    if (handoverError) {
+      const migrationMissing = handoverError.code === "PGRST202" || handoverError.code === "42883";
+      return NextResponse.json({
+        error: migrationMissing
+          ? "Staff handovers are not enabled in this database yet. Apply supabase/migrations/202610250001_contextual_request_handovers.sql in the Supabase SQL Editor."
+          : handoverError.message || "Unable to record the staff handover.",
+      }, { status: 400 });
+    }
+    return NextResponse.json({ result: handover });
+  }
+
+  if (action === "acknowledge_handover") {
+    const handoverId = typeof body.handoverId === "string" ? body.handoverId : "";
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(handoverId)) {
+      return NextResponse.json({ error: "Choose a valid handover to acknowledge." }, { status: 400 });
+    }
+    const { data: handover, error: handoverError } = await context.admin.rpc("acknowledge_patient_request_handover", {
+      p_actor_user_id: context.user.id,
+      p_handover_id: handoverId,
+    });
+    if (handoverError) {
+      const migrationMissing = handoverError.code === "PGRST202" || handoverError.code === "42883";
+      return NextResponse.json({
+        error: migrationMissing
+          ? "Staff handovers are not enabled in this database yet. Apply supabase/migrations/202610250001_contextual_request_handovers.sql in the Supabase SQL Editor."
+          : handoverError.message || "Unable to acknowledge the handover.",
+      }, { status: 400 });
+    }
+    return NextResponse.json({ result: handover });
   }
 
   const { data, error } = await context.admin.rpc("staff_handle_patient_request", {

@@ -13,14 +13,20 @@ type StaffAppointment = {
 };
 type StaffWorkItem = { id: string; patient_request_id: string; reference_code: string; title: string; summary: string | null; item_type: string; priority: string; status: string; owner_id: string | null; due_at: string | null; created_at: string; updated_at: string };
 type StaffAuditEvent = { id: number; actor_id: string | null; entity_type: string; entity_id: string; action: string; details: Record<string, unknown>; created_at: string };
-type CoordinationEvent = { id: string; at: string; title: string; detail: string; kind: "request" | "message" | "task" | "audit" | "appointment" };
+type StaffMember = { user_id: string; role: string; label: string };
+type StaffHandover = {
+  id: string; patient_request_id: string; work_item_id: string; from_user_id: string; to_user_id: string;
+  note: string; status: "pending" | "acknowledged" | "cancelled"; created_at: string;
+  acknowledged_at: string | null; acknowledged_by: string | null; from_label: string; to_label: string;
+};
+type CoordinationEvent = { id: string; at: string; title: string; detail: string; kind: "request" | "message" | "task" | "audit" | "appointment" | "handover" };
 type StaffRequest = {
   id: string; request_code: string; hospital_id: string; patient_user_id: string; service_id: string | null;
   request_type: string; status: string; subject: string; preferred_start_at: string | null; preferred_end_at: string | null;
   submitted_at: string; created_at: string; closed_at: string | null;
   patient: { display_name: string; phone_number: string | null };
   service: { id: string; name: string; department: string | null } | null;
-  appointment: StaffAppointment | null; messages: StaffMessage[]; workItems: StaffWorkItem[]; auditEvents: StaffAuditEvent[];
+  appointment: StaffAppointment | null; messages: StaffMessage[]; workItems: StaffWorkItem[]; auditEvents: StaffAuditEvent[]; handovers: StaffHandover[];
 };
 const statusLabel: Record<string, string> = {
   submitted: "New request", under_review: "Under review", awaiting_patient: "Awaiting patient",
@@ -108,6 +114,22 @@ function coordinationTimeline(item: StaffRequest): CoordinationEvent[] {
       detail: "Recorded in the hospital audit trail.", kind: "audit",
     });
   }
+  for (const handover of item.handovers ?? []) {
+    events.push({
+      id: `handover-${handover.id}`, at: handover.created_at,
+      title: `Handover sent to ${handover.to_label}`,
+      detail: `${handover.note} · ${handover.status.replaceAll("_", " ")}`,
+      kind: "handover",
+    });
+    if (handover.acknowledged_at) {
+      events.push({
+        id: `handover-ack-${handover.id}`, at: handover.acknowledged_at,
+        title: `Handover acknowledged by ${handover.to_label}`,
+        detail: "The receiving colleague confirmed responsibility in Converge.",
+        kind: "handover",
+      });
+    }
+  }
   if (item.appointment) {
     events.push({
       id: `appointment-${item.appointment.id}`,
@@ -125,6 +147,9 @@ function coordinationTimeline(item: StaffRequest): CoordinationEvent[] {
 export default function HospitalRequestsPage() {
   const [hospital, setHospital] = useState<{ id: string; name: string; city: string | null; country: string } | null>(null);
   const [role, setRole] = useState("");
+  const [actorId, setActorId] = useState("");
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [handoverAvailable, setHandoverAvailable] = useState(false);
   const [requests, setRequests] = useState<StaffRequest[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -136,6 +161,10 @@ export default function HospitalRequestsPage() {
   const [showAskForm, setShowAskForm] = useState(false);
   const [askMessage, setAskMessage] = useState("");
   const [showProposal, setShowProposal] = useState(false);
+  const [showHandover, setShowHandover] = useState(false);
+  const [handoverNote, setHandoverNote] = useState("");
+  const [handoverWorkItemId, setHandoverWorkItemId] = useState("");
+  const [handoverRecipientId, setHandoverRecipientId] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
   const [location, setLocation] = useState("");
@@ -152,6 +181,9 @@ export default function HospitalRequestsPage() {
       if (!response.ok) throw new Error(payload.error ?? "Unable to load patient requests.");
       setHospital(payload.hospital ?? null);
       setRole(payload.role ?? "");
+      setActorId(payload.userId ?? "");
+      setStaffMembers((payload.staffMembers ?? []) as StaffMember[]);
+      setHandoverAvailable(payload.handoverAvailable === true);
       const rows = (payload.requests ?? []) as StaffRequest[];
       setRequests(rows);
       setSelectedId(current => rows.some(item => item.id === current) ? current : rows[0]?.id ?? "");
@@ -189,6 +221,14 @@ export default function HospitalRequestsPage() {
   const selected = requests.find(item => item.id === selectedId) ?? null;
   const selectedGuidance = selected ? coordinationGuidance(selected) : null;
   const selectedTimeline = selected ? coordinationTimeline(selected) : [];
+  const latestHandover = selected?.handovers?.[0] ?? null;
+  const handoverWorkItems = (selected?.workItems ?? []).filter(item => !["resolved", "closed", "draft"].includes(item.status));
+  const effectiveHandoverWorkItemId = handoverWorkItems.some(item => item.id === handoverWorkItemId)
+    ? handoverWorkItemId : handoverWorkItems[0]?.id ?? "";
+  const handoverWorkItem = handoverWorkItems.find(item => item.id === effectiveHandoverWorkItemId) ?? null;
+  const eligibleHandoverRecipients = staffMembers.filter(member =>
+    member.user_id !== actorId && member.user_id !== handoverWorkItem?.owner_id
+  );
   const canManage = ["owner", "admin", "clinician", "operations"].includes(role);
 
   async function act(action: string, requestItem = selected, message = "", proposal?: { startAt: string; endAt: string; location: string; instructions: string }) {
@@ -212,7 +252,7 @@ export default function HospitalRequestsPage() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Unable to complete this action.");
       setNotice("Request updated. The change and audit event were recorded together.");
-      setShowAskForm(false); setAskMessage(""); setShowProposal(false); setDecisionMessage("");
+      setShowAskForm(false); setAskMessage(""); setShowProposal(false); setShowHandover(false); setDecisionMessage("");
       await load(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to complete this action.");
@@ -245,6 +285,56 @@ export default function HospitalRequestsPage() {
     } catch {
       setError("The handover brief could not be copied in this browser. You can review the coordination details on this page.");
     }
+  }
+
+  async function submitHandover(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!hospital || !selected || !handoverAvailable || !effectiveHandoverWorkItemId || !handoverRecipientId) {
+      setError("Choose an active linked work item and a receiving colleague."); return;
+    }
+    if (handoverNote.trim().length < 5) {
+      setError("Add a handover note with at least 5 characters."); return;
+    }
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/hospital/requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hospitalId: hospital.id, requestId: selected.id, action: "handover_request",
+          workItemId: effectiveHandoverWorkItemId, recipientUserId: handoverRecipientId,
+          message: handoverNote.trim(),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Unable to hand over this request.");
+      setNotice("Handover recorded. The receiving colleague was assigned the work and notified.");
+      setShowHandover(false); setHandoverNote(""); setHandoverRecipientId(""); setHandoverWorkItemId("");
+      await load(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to record the handover.");
+    } finally { setBusy(false); }
+  }
+
+  async function acknowledgeHandover(item: StaffRequest, handover: StaffHandover) {
+    if (!hospital) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/hospital/requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hospitalId: hospital.id, requestId: item.id, action: "acknowledge_handover",
+          handoverId: handover.id,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Unable to acknowledge this handover.");
+      setNotice("Handover acknowledged. The confirmation has been recorded in the request history.");
+      await load(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to acknowledge the handover.");
+    } finally { setBusy(false); }
   }
 
   function submitAsk(event: FormEvent<HTMLFormElement>) {
@@ -294,7 +384,7 @@ export default function HospitalRequestsPage() {
           {loading && <div className="care-loading"><span className="care-spinner" /> Loading requests…</div>}
           {!loading && visible.length === 0 && <div className="care-empty compact-empty"><div className="care-empty-mark"><MessageCircle size={20} /></div><h3>No requests in this view</h3><p>New patient submissions will appear here when they are received.</p></div>}
           <div className="staff-request-list">
-            {visible.map(item => <button key={item.id} className={`staff-request-row ${selectedId === item.id ? "selected" : ""}`} onClick={() => { setSelectedId(item.id); setShowAskForm(false); setShowProposal(false); }}>
+            {visible.map(item => <button key={item.id} className={`staff-request-row ${selectedId === item.id ? "selected" : ""}`} onClick={() => { setSelectedId(item.id); setShowAskForm(false); setShowProposal(false); setShowHandover(false); setHandoverNote(""); setHandoverRecipientId(""); setHandoverWorkItemId(""); }}>
               <div className="staff-request-row-top"><strong>{item.request_code}</strong><span className={`care-status care-status-${item.status}`}>{statusLabel[item.status] ?? item.status.replaceAll("_"," ")}</span></div>
               <h3>{item.subject}</h3>
               <p>{item.patient.display_name} · {item.service?.name ?? "Service unavailable"}</p>
@@ -341,6 +431,33 @@ export default function HospitalRequestsPage() {
                 <span className="coordination-signal-icon"><Sparkles size={17} /></span>
                 <div><div className="coordination-signal-label">NEXT COORDINATION STEP <span>Workflow-based guidance</span></div><h4>{selectedGuidance.title}</h4><p>{selectedGuidance.detail}</p></div>
               </div>}
+
+
+              <section className="coordination-handover-panel">
+                <div className="coordination-section-heading">
+                  <div><span className="care-eyebrow">TEAM HANDOVER</span><h4>Make responsibility explicit</h4></div>
+                  <span>{latestHandover ? latestHandover.status.replaceAll("_", " ") : "No handover"}</span>
+                </div>
+                {latestHandover && <div className="coordination-current-handover">
+                  <div className="coordination-current-handover-top"><strong>{latestHandover.to_label}</strong><span className={`coordination-handover-status handover-${latestHandover.status}`}>{latestHandover.status.replaceAll("_", " ")}</span></div>
+                  <p>{latestHandover.note}</p>
+                  <small>Sent by {latestHandover.from_label} · {formatDate(latestHandover.created_at)}{latestHandover.acknowledged_at ? ` · acknowledged ${formatDate(latestHandover.acknowledged_at)}` : ""}</small>
+                  {latestHandover.status === "pending" && latestHandover.to_user_id === actorId && <button type="button" className="care-button-primary small coordination-ack-button" onClick={() => void acknowledgeHandover(selected, latestHandover)} disabled={busy}><CheckCircle2 size={14} /> Acknowledge handover</button>}
+                </div>}
+                {!handoverAvailable && <div className="coordination-migration-note"><ShieldCheck size={15} /><span>Staff handovers need the new database migration before they can be used. The rest of this request workflow remains available.</span></div>}
+                {handoverAvailable && canManage && !terminal.has(selected.status) && <div className="coordination-handover-actions">
+                  <button type="button" className="care-button-secondary small" onClick={() => setShowHandover(value => !value)} disabled={busy}><Users size={14} /> {showHandover ? "Close handover" : "Create handover"}</button>
+                </div>}
+                {showHandover && handoverAvailable && <form className="coordination-handover-form" onSubmit={submitHandover}>
+                  <label>Linked work item<select required value={effectiveHandoverWorkItemId} onChange={event => { setHandoverWorkItemId(event.target.value); setHandoverRecipientId(""); }}><option value="" disabled>Select active work</option>{handoverWorkItems.map(item => <option key={item.id} value={item.id}>{item.reference_code} · {item.title} · {item.status.replaceAll("_", " ")}</option>)}</select></label>
+                  <label>Hand over to<select required value={handoverRecipientId} onChange={event => setHandoverRecipientId(event.target.value)}><option value="" disabled>Select a hospital colleague</option>{eligibleHandoverRecipients.map(member => <option key={member.user_id} value={member.user_id}>{member.label} · {member.role.replaceAll("_", " ")}</option>)}</select></label>
+                  <label>Handover note<textarea required minLength={5} maxLength={2000} rows={3} value={handoverNote} onChange={event => setHandoverNote(event.target.value)} placeholder="What is pending, what has already been done, and what should the next person do?" /></label>
+                  <p className="coordination-handover-helper"><ShieldCheck size={13} /> This note is internal to authorised hospital staff. The selected work will be reassigned and the receiving colleague notified.</p>
+                  <div className="coordination-handover-form-actions"><button type="button" className="care-button-secondary small" onClick={() => setShowHandover(false)} disabled={busy}>Cancel</button><button type="submit" className="care-button-primary small" disabled={busy || !handoverRecipientId || !effectiveHandoverWorkItemId || handoverNote.trim().length < 5}><Send size={14} /> {busy ? "Sending…" : "Hand over work"}</button></div>
+                  {eligibleHandoverRecipients.length === 0 && <p className="coordination-handover-helper">No other active hospital colleagues are available for this work item.</p>}
+                  {handoverWorkItems.length === 0 && <p className="coordination-handover-helper">There are no active linked work items to hand over.</p>}
+                </form>}
+              </section>
 
               <div className="coordination-room-grid">
                 <section className="coordination-work-panel">

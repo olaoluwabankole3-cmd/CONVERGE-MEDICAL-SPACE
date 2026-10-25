@@ -51,6 +51,7 @@ Run these migrations in order in the intended Supabase project's SQL Editor. Ver
 12. `supabase/migrations/202610190002_atomic_audit_for_direct_changes.sql` — writes audit records atomically for authenticated browser-side work-item and patient-reference changes, and removes direct authenticated/anonymous audit-event insert privileges.
 13. `supabase/migrations/202610190003_atomic_hospital_registration_decisions.sql` — applies platform-admin approval/rejection and its audit event in one transaction.
 14. `supabase/migrations/202610220001_atomic_hospital_settings_and_audit.sql` — applies hospital profile updates and their audit event atomically, restricted to the trusted server role.
+15. `supabase/migrations/202610250001_contextual_request_handovers.sql` — transactional internal staff handovers with linked-work reassignment, in-app notification, acknowledgement, and audit events.
 
 Apply these migrations in order on a fresh database. For an existing database, first verify which migrations have already been applied; do not rerun the initial schema migration against an initialized project. Vercel does not execute SQL migrations automatically. Migration 7 is required by the patient/hospital request APIs, migration 8 is required to create follow-up tasks from the operations analyst, migration 9 adds optional staff assignment, migration 13 makes hospital approval atomic, and migration 14 makes hospital settings changes and their audit events atomic. Apply applicable migrations once, in order. Run each applicable migration once in the intended Supabase project before using its workflow. The public service directory and new pages are committed to GitHub, but deployment, database RPC behaviour, authentication flows, and tenant isolation still require live verification. Use synthetic data only until that verification and the hospital's security review are complete.
 
@@ -145,3 +146,8 @@ For invitation and password-reset emails to reach external staff addresses:
 5. Check Supabase Auth logs if a send fails. After SMTP is configured, retry the invitation from Team & Access; an unconfirmed account left by an earlier failed invitation can be invited again.
 
 New invitees use the invitation link to set their first password at `/accept-invite`. Existing confirmed accounts are added to the hospital without a new invite email; they sign in using their existing password or use **Forgot password?**. Password-reset emails use `/reset-password`.
+
+
+## Contextual staff handovers
+
+The Coordination Room can transfer a linked operational work item to another active member of the same hospital. A handover captures an internal-only note, reassigns the work item, triggers the existing in-app assignment notification, and writes audit events in one transaction. The recipient can acknowledge receipt from the linked patient request; the acknowledgement and internal activity entry are also transactional. Handover notes are never shown in the patient portal. Apply migration 15 after the existing notification/assignment migration before enabling handovers in the target Supabase project. Until that migration is applied, the existing patient request workflow remains available and the handover controls are disabled.

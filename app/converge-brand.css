@@ -2000,3 +2000,36 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
   .hospital-pulse-footnote > span { min-width:0; }
   .pulse-live-indicator { font-size:8px; }
 }
+
+
+/* Contextual staff handovers in the Coordination Room */
+.coordination-handover-panel { margin:0 0 1.05rem; padding:1rem; border:1px solid rgba(191,224,197,.12); border-radius:12px; background:rgba(5,13,8,.16); }
+.coordination-current-handover { margin:.7rem 0 .25rem; padding:.85rem; border:1px solid rgba(164,237,193,.15); border-radius:10px; background:rgba(164,237,193,.045); }
+.coordination-current-handover-top { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.6rem; }
+.coordination-current-handover-top strong { color:#e4eee7; font-size:.78rem; overflow-wrap:anywhere; }
+.coordination-handover-status { display:inline-flex; align-items:center; padding:.25rem .45rem; border-radius:6px; color:#e7d59a; background:rgba(204,173,91,.09); font-size:.63rem; text-transform:capitalize; }
+.coordination-handover-status.handover-acknowledged { color:#a4edc1; background:rgba(164,237,193,.09); }
+.coordination-handover-status.handover-cancelled { color:#9daaa0; background:rgba(157,170,160,.07); }
+.coordination-current-handover p { margin:.55rem 0; color:#a5b5aa; font-size:.76rem; line-height:1.55; overflow-wrap:anywhere; white-space:pre-wrap; }
+.coordination-current-handover small { display:block; color:#798c80; font-size:.65rem; line-height:1.45; }
+.coordination-ack-button { margin-top:.8rem; }
+.coordination-handover-actions { display:flex; justify-content:flex-start; margin-top:.7rem; }
+.coordination-handover-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; margin-top:.8rem; padding-top:.9rem; border-top:1px solid rgba(191,224,197,.1); }
+.coordination-handover-form label { display:flex; flex-direction:column; gap:.4rem; min-width:0; color:#a0b0a4; font-size:.71rem; font-weight:600; }
+.coordination-handover-form label:nth-child(3) { grid-column:1 / -1; }
+.coordination-handover-form input,.coordination-handover-form textarea,.coordination-handover-form select { width:100%; min-width:0; border:1px solid rgba(191,224,197,.15); border-radius:8px; padding:.7rem .75rem; color:#e6f0e8; background:#0c1510; outline:none; font-size:.76rem; font-weight:400; }
+.coordination-handover-form textarea { resize:vertical; }
+.coordination-handover-form input:focus,.coordination-handover-form textarea:focus,.coordination-handover-form select:focus { border-color:rgba(164,237,193,.5); box-shadow:0 0 0 3px rgba(164,237,193,.055); }
+.coordination-handover-helper { grid-column:1 / -1; display:flex; align-items:flex-start; gap:.35rem; margin:0; color:#82958a; font-size:.65rem; line-height:1.5; }
+.coordination-handover-helper svg { flex:0 0 auto; margin-top:.1rem; }
+.coordination-handover-form-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; gap:.5rem; }
+.coordination-migration-note { display:flex; align-items:flex-start; gap:.5rem; margin-top:.6rem; padding:.75rem; border:1px solid rgba(210,178,111,.2); border-radius:8px; color:#d3bd8f; background:rgba(122,91,34,.07); font-size:.69rem; line-height:1.5; }
+.coordination-migration-note svg { flex:0 0 auto; }
+.event-handover .coordination-timeline-dot { background:#8dd7ae; box-shadow:0 0 0 1px rgba(164,237,193,.25); }
+@media (max-width: 600px) {
+  .coordination-handover-panel { padding:.8rem; }
+  .coordination-handover-form { grid-template-columns:minmax(0,1fr); }
+  .coordination-handover-form label:nth-child(3) { grid-column:auto; }
+  .coordination-handover-form-actions { grid-column:auto; }
+  .coordination-handover-helper { grid-column:auto; }
+}
