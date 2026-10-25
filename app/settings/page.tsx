@@ -1,5 +1,7 @@
 "use client";
 
+import HospitalWorkspaceSwitcher from "@/components/hospital-workspace-switcher";
+import { getSelectedHospitalId } from "@/lib/client/hospital-workspace";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,10 +30,14 @@ export default function HospitalSettingsPage() {
       if (!supabase) throw new Error("Supabase is not configured.");
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) { router.replace("/login"); return; }
+      const requestedHospitalId = getSelectedHospitalId();
       const { data: memberships, error: membershipError } = await supabase.from("hospital_memberships")
-        .select("hospital_id,created_at").order("created_at", { ascending: false }).limit(1);
+        .select("hospital_id,created_at").order("created_at", { ascending: false }).limit(100);
       if (membershipError) throw membershipError;
-      const membership = memberships?.[0];
+      const membership = requestedHospitalId
+        ? (memberships ?? []).find(item => item.hospital_id === requestedHospitalId)
+        : memberships?.[0];
+      if (requestedHospitalId && !membership) throw new Error("You do not have access to the selected hospital workspace.");
       if (!membership) throw new Error("No active hospital membership was found for this account.");
       const response = await fetch(`/api/hospital/settings?hospitalId=${encodeURIComponent(membership.hospital_id)}`, { cache: "no-store" });
       const payload = await response.json();
@@ -72,6 +78,7 @@ export default function HospitalSettingsPage() {
           <Link className="onboarding-signout" href="/"><ArrowLeft size={15} /> Workspace</Link>
         </div>
       </header>
+      <HospitalWorkspaceSwitcher />
       <div className="onboarding-content" style={{ maxWidth: 960 }}>
         <div className="onboarding-heading"><span className="auth-overline">WORKSPACE CONFIGURATION</span><h1>Hospital settings</h1><p>Keep your organisation details current. Updates are restricted to hospital owners and administrators and recorded in the audit history.</p></div>
         {error && <div className="auth-alert error" role="alert">{error}</div>}
