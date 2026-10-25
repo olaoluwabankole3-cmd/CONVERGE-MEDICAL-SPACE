@@ -21,7 +21,7 @@ export default function HospitalTeamPage() {
   const router = useRouter();
   const [requestedHospitalId, setRequestedHospitalId] = useState(() => {
     if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("hospitalId") ?? "";
+    return new URLSearchParams(window.location.search).get("hospitalId") || window.localStorage.getItem("converge.activeHospitalId") || "";
   });
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [hospital, setHospital] = useState<Hospital | null>(null);
@@ -71,6 +71,7 @@ export default function HospitalTeamPage() {
       }
       const selected = options.find(item => item.id === chosenId);
       if (!selected) throw new Error("You do not have access to the selected hospital workspace.");
+      window.localStorage.setItem("converge.activeHospitalId", selected.id);
 
       setHospital({ id: selected.id, name: selected.name, status: selected.status });
       setRole(selected.role);
@@ -95,7 +96,7 @@ export default function HospitalTeamPage() {
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    const syncFromHistory = () => setRequestedHospitalId(new URLSearchParams(window.location.search).get("hospitalId") ?? "");
+    const syncFromHistory = () => setRequestedHospitalId(new URLSearchParams(window.location.search).get("hospitalId") || window.localStorage.getItem("converge.activeHospitalId") || "");
     window.addEventListener("popstate", syncFromHistory);
     return () => window.removeEventListener("popstate", syncFromHistory);
   }, []);
@@ -171,6 +172,8 @@ export default function HospitalTeamPage() {
           <select id="team-hospital-select" value={hospital?.id ?? requestedHospitalId} onChange={event => {
             const nextId = event.target.value;
             setRequestedHospitalId(nextId);
+            if (nextId) window.localStorage.setItem("converge.activeHospitalId", nextId);
+            else window.localStorage.removeItem("converge.activeHospitalId");
             setMembers([]); setHospital(null); setRole(""); setError(""); setNotice("");
             router.push(nextId ? `/team?hospitalId=${encodeURIComponent(nextId)}` : "/team");
           }} style={{ width: "100%", border: "1px solid var(--line, #e5ebef)", borderRadius: 9, padding: "11px 12px", background: "#0d1511", color: "#f3f5f3", fontSize: 13 }}>
