@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
 
   const rank: Record<Severity, number> = { urgent: 0, attention: 1, watch: 2 };
   signals.sort((a, b) => rank[a.severity] - rank[b.severity] || b.ageHours - a.ageHours);
-  const limitedSignals = signals.slice(0, 30).map(({ ageHours: _ageHours, ...signal }) => signal);
+  const limitedSignals = signals.slice(0, 30);
 
   return NextResponse.json({
     hospital: { id: hospital.id, name: hospital.name },
