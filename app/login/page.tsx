@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
+const CONVERGE_SSO_ENABLED = process.env.NEXT_PUBLIC_CONVERGE_SSO_ENABLED === "true";
+
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
@@ -66,6 +68,26 @@ export default function LoginPage() {
     }
   }
 
+  async function continueWithConverge() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) throw new Error("Sign-in is not configured. Please try again later.");
+      const destination = "/overview";
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "custom:converge",
+        options: { redirectTo, scopes: "openid email profile" },
+      });
+      if (oauthError) throw oauthError;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Converge sign-in could not be started. Please try again.");
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="auth-shell">
       <section className="auth-story">
@@ -92,6 +114,15 @@ export default function LoginPage() {
             {message && <div className="auth-alert success" role="status">{message}</div>}
             <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"} {!busy && <ArrowRight size={17} />}</button>
           </form>
+          {mode === "signin" && CONVERGE_SSO_ENABLED && (
+            <>
+              <div className="converge-sso-divider"><span>OR CONTINUE WITH</span></div>
+              <button type="button" className="converge-sso-button" onClick={() => void continueWithConverge()} disabled={busy}>
+                Continue with Converge <ArrowRight size={16} />
+              </button>
+              <p className="converge-sso-note">One identity across workspaces. Hospital approval and permissions still apply.</p>
+            </>
+          )}
           {mode === "signin" && <p className="auth-switch"><button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }}>Forgot password?</button></p>}
           <p className="auth-switch">{mode === "signin" ? "New to Converge?" : mode === "signup" ? "Already have an account?" : "Remember your password?"} <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); setPassword(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
           <p className="auth-legal"><ShieldCheck size={14} /> Do not submit patient information through this sign-in page.</p>
