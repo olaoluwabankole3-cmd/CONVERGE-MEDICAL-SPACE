@@ -235,7 +235,7 @@ export default function PatientRequestsPage() {
     <main className="care-page">
       <header className="care-topbar">
         <Link href="/care" className="care-brand"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" /></Link>
-        <nav className="care-header-actions"><Link href="/care" className="care-nav-link">Service directory</Link><span className="care-account">{email || "Patient workspace"}</span><Link href="/patient-login" className="care-nav-primary">Account <ArrowRight size={15} /></Link></nav>
+        <nav className="care-header-actions"><Link href="/care" className="care-nav-link">Service directory</Link><a href="https://ai-native-research-qfeh.vercel.app/" className="care-nav-link care-platform-link">Converge platform ↗</a><span className="care-account">{email || "Patient workspace"}</span><Link href="/patient-login" className="care-nav-primary">Account <ArrowRight size={15} /></Link></nav>
       </header>
 
       <section className="care-workspace-heading care-patient-welcome">
@@ -387,7 +387,7 @@ export default function PatientRequestsPage() {
         </>
       )}
 
-      <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Converge home"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Only participating hospitals can respond to requests submitted here.</span><Link href="/login">Hospital team sign in</Link></footer>
+      <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Medical Intelligence home"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Only participating hospitals can respond to requests submitted here.</span><a href="https://ai-native-research-qfeh.vercel.app/">Main Converge platform ↗</a><Link href="/login">Hospital team sign in</Link></footer>
     </main>
   );
 }
