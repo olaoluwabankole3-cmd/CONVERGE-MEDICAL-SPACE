@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Activity, ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
+const CONVERGE_SSO_ENABLED = process.env.NEXT_PUBLIC_CONVERGE_SSO_ENABLED === "true";
+
 function patientDestination() {
   const params = new URLSearchParams(window.location.search);
   const next = new URL("/care/requests", window.location.origin);
@@ -64,6 +66,26 @@ export default function PatientLoginPage() {
     }
   }
 
+  async function continueWithConverge() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) throw new Error("Patient sign-in is not configured. Please try again later.");
+      const destination = patientDestination();
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "custom:converge",
+        options: { redirectTo, scopes: "openid email profile" },
+      });
+      if (oauthError) throw oauthError;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Converge sign-in could not be started. Please try again.");
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="patient-auth-page">
       <section className="patient-auth-brand-panel">
@@ -89,6 +111,15 @@ export default function PatientLoginPage() {
             {message && <div className="care-alert success" role="status">{message}</div>}
             <button type="submit" className="care-button-primary wide" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create patient account"} {!busy && <ArrowRight size={16} />}</button>
           </form>
+          {mode === "signin" && CONVERGE_SSO_ENABLED && (
+            <>
+              <div className="converge-sso-divider"><span>OR CONTINUE WITH</span></div>
+              <button type="button" className="converge-sso-button" onClick={() => void continueWithConverge()} disabled={busy}>
+                Continue with Converge <ArrowRight size={16} />
+              </button>
+              <p className="converge-sso-note">Patient access remains separate from hospital staff permissions.</p>
+            </>
+          )}
           <p className="patient-auth-switch">{mode === "signin" ? "New to Converge?" : "Already have a patient account?"} <button onClick={() => { setMode(value => value === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
           <p className="patient-auth-legal"><ShieldCheck size={14} /> Patient accounts are separate from hospital staff workspaces.</p>
           <Link href="/login" className="patient-auth-staff-link">Hospital team sign in</Link>
