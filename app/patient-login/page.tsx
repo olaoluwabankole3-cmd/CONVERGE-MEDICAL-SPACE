@@ -115,6 +115,7 @@ export default function PatientLoginPage() {
           )}
           {CONVERGE_SSO_ENABLED && (
             <>
+              {error && <div className="care-alert error" role="alert">{error}</div>}
               <button type="button" className="converge-sso-button" onClick={() => void continueWithConverge()} disabled={busy}>
                 Continue with Converge <ArrowRight size={16} />
               </button>
