@@ -102,7 +102,7 @@ export default function PatientLoginPage() {
         <div className="patient-auth-form-wrap">
           <span className="care-eyebrow">{mode === "signin" ? "WELCOME BACK" : "CREATE PATIENT ACCOUNT"}</span>
           <h2>{mode === "signin" ? "Sign in to your care space" : "Create your account"}</h2>
-          <p className="patient-auth-intro">{mode === "signin" ? "Continue to your patient requests and hospital updates." : "Use an email address you can access to receive account confirmation."}</p>
+          <p className="patient-auth-intro">{mode === "signin" ? "Use your Converge account to continue, then return here to your patient requests and hospital updates." : "Use an email address you can access to receive account confirmation."}</p>
           {!CONVERGE_SSO_ENABLED && (
           <form className="patient-auth-form" onSubmit={submit}>
             {mode === "signup" && <label>Full name<input autoComplete="name" value={name} onChange={event => setName(event.target.value)} required minLength={2} maxLength={160} placeholder="Your full name" /></label>}
