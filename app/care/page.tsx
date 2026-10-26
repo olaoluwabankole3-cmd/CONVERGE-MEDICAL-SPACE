@@ -58,6 +58,7 @@ export default function CareDirectoryPage() {
           <img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo" />
         </Link>
         <nav className="care-header-actions" aria-label="Patient navigation">
+          <a href="https://ai-native-research-qfeh.vercel.app/" className="care-nav-link care-platform-link">Converge platform ↗</a>
           <Link href="/care/requests" className="care-nav-link">My requests</Link>
           <Link href="/patient-login" className="care-nav-primary">Patient sign in <ArrowRight size={15} /></Link>
         </nav>
@@ -124,7 +125,7 @@ export default function CareDirectoryPage() {
         </div>
       </section>
 
-      <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Converge home"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Coordinate your next step with a participating hospital.</span><Link href="/login">Hospital team sign in</Link></footer>
+      <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Medical Intelligence home"><img src="/converge-logo.svg" alt="Converge Medical Intelligence" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Coordinate your next step with a participating hospital.</span><a href="https://ai-native-research-qfeh.vercel.app/">Main Converge platform ↗</a><Link href="/login">Hospital team sign in</Link></footer>
     </main>
   );
 }
