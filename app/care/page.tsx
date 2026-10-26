@@ -75,7 +75,7 @@ export default function CareDirectoryPage() {
           <div className="care-hero-note"><ShieldCheck size={15} /> Your request stays connected to the hospital team handling it. Appointment times are confirmed by hospital staff.</div>
         </div>
         <div className="care-hero-panel" aria-label="How the request process works">
-          <div className="care-panel-top"><span>YOUR CARE REQUEST</span><span className="care-live-dot">Connected workflow</span></div>
+          <div className="care-panel-top"><span>YOUR CARE REQUEST</span><span className="care-live-dot">Request journey</span></div>
           <div className="care-step"><span className="care-step-number">01</span><div><strong>Choose a service</strong><p>Start with a participating hospital.</p></div><span className="care-step-check">✓</span></div>
           <div className="care-step"><span className="care-step-number">02</span><div><strong>Hospital reviews</strong><p>Your request enters their operations queue.</p></div><span className="care-step-check">↗</span></div>
           <div className="care-step"><span className="care-step-number">03</span><div><strong>Know what happens next</strong><p>Track the response, proposal, or next step.</p></div><span className="care-step-check">○</span></div>
