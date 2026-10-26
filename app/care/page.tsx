@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Building2, CalendarDays, RefreshCw, Search, ShieldCheck, Stethoscope } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, CheckCircle2, HeartHandshake, RefreshCw, Search, ShieldCheck, Stethoscope } from "lucide-react";
 
 type Service = {
   id: string;
@@ -46,6 +46,11 @@ export default function CareDirectoryPage() {
     );
   }, [services, search]);
 
+  const hospitalCount = useMemo(
+    () => new Set(services.map(service => service.hospital?.id).filter((id): id is string => Boolean(id))).size,
+    [services],
+  );
+
   return (
     <main className="care-page">
       <header className="care-topbar">
@@ -60,14 +65,14 @@ export default function CareDirectoryPage() {
 
       <section className="care-hero">
         <div className="care-hero-copy">
-          <span className="care-eyebrow"><ShieldCheck size={14} /> PATIENT ACCESS</span>
-          <h1>A clearer path to your next step in care.</h1>
-          <p>Explore services offered by participating hospitals, send a request, and follow the response in one place.</p>
+          <span className="care-eyebrow"><HeartHandshake size={15} /> YOUR CARE, MORE CONNECTED</span>
+          <h1>Getting care should feel <span className="care-hero-emphasis">easier.</span></h1>
+          <p>Find a participating hospital service, tell the team what you need, and keep every update together. You will always be able to see what has happened and what comes next.</p>
           <div className="care-hero-actions">
             <a className="care-button-primary" href="#services">Explore services <ArrowRight size={16} /></a>
             <Link className="care-button-secondary" href="/care/requests">Track a request</Link>
           </div>
-          <div className="care-hero-note"><ShieldCheck size={15} /> Appointment requests are reviewed and confirmed by the hospital.</div>
+          <div className="care-hero-note"><ShieldCheck size={15} /> Your request stays connected to the hospital team handling it. Appointment times are confirmed by hospital staff.</div>
         </div>
         <div className="care-hero-panel" aria-label="How the request process works">
           <div className="care-panel-top"><span>YOUR CARE REQUEST</span><span className="care-live-dot">Connected workflow</span></div>
@@ -78,11 +83,19 @@ export default function CareDirectoryPage() {
         </div>
       </section>
 
+      <section className="care-promise-strip" aria-label="What you can expect">
+        <div className="care-promise-item"><span className="care-promise-icon"><ShieldCheck size={18} /></span><span><strong>Your request, kept private</strong><small>Only the selected hospital team can respond to it.</small></span></div>
+        <div className="care-promise-item"><span className="care-promise-icon"><MessageCircle size={18} /></span><span><strong>Updates in one place</strong><small>Keep messages and progress connected to your request.</small></span></div>
+        <div className="care-promise-item"><span className="care-promise-icon"><CheckCircle2 size={18} /></span><span><strong>Clear next steps</strong><small>See when the hospital needs to review or respond.</small></span></div>
+      </section>
+
       <section id="services" className="care-services-section">
         <div className="care-section-heading">
-          <div><span className="care-eyebrow">PARTICIPATING HOSPITALS</span><h2>Explore available services</h2><p>Only services published by an active participating hospital appear here.</p></div>
+          <div><span className="care-eyebrow">FIND YOUR NEXT STEP</span><h2>Explore available services</h2><p>Choose a service to start a request with a participating hospital. The team will review it and respond through your private workspace.</p></div>
           <label className="care-search"><Search size={17} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search services or hospitals" /></label>
         </div>
+
+        <div className="care-results-meta"><span>{loading ? "Checking the service directory…" : `${visible.length} ${visible.length === 1 ? "service" : "services"} shown`}</span><span className="care-results-dot" /><span>{hospitalCount} {hospitalCount === 1 ? "participating hospital" : "participating hospitals"}</span></div>
 
         {error && <div className="care-alert error" role="alert">{error}<button onClick={() => void load()}><RefreshCw size={14} /> Retry</button></div>}
         {loading && <div className="care-loading"><span className="care-spinner" /> Loading participating services…</div>}
