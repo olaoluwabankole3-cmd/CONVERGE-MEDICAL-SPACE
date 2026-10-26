@@ -32,8 +32,8 @@ const terminal = new Set(["completed", "no_show", "cancelled", "declined"]);
 
 function requestProgress(status: string): number {
   if (["completed", "no_show", "cancelled", "declined"].includes(status)) return 4;
-  if (["confirmed", "in_progress", "cancellation_requested"].includes(status)) return 3;
-  if (["under_review", "awaiting_hospital", "awaiting_patient", "appointment_proposed"].includes(status)) return 2;
+  if (["confirmed", "in_progress", "cancellation_requested", "awaiting_patient", "appointment_proposed"].includes(status)) return 3;
+  if (["under_review", "awaiting_hospital"].includes(status)) return 2;
   return 1;
 }
 
@@ -245,15 +245,31 @@ export default function PatientRequestsPage() {
           <h1>{firstName ? `Welcome back, ${firstName}.` : "Your care, in one place."}</h1>
           <p>Keep your requests, hospital replies and appointment updates together. You should not have to guess what happens next.</p>
           <div className="care-welcome-actions">
-            <a className="care-button-primary" href="#new-request">Start a request <ArrowUpRight size={16} /></a>
-            <a className="care-button-secondary" href="#your-requests">Follow my progress <ArrowRight size={15} /></a>
+            {needsLogin ? (
+              <>
+                <Link className="care-button-primary" href="/patient-login">Patient sign in <ArrowRight size={16} /></Link>
+                <Link className="care-button-secondary" href="/care">Explore services</Link>
+              </>
+            ) : (
+              <>
+                <a className="care-button-primary" href="#new-request">Start a request <ArrowUpRight size={16} /></a>
+                <a className="care-button-secondary" href="#your-requests">Follow my progress <ArrowRight size={15} /></a>
+              </>
+            )}
           </div>
           <div className="care-welcome-trust"><ShieldCheck size={15} /><span>Your requests are private to your account. Hospital staff review and confirm appointment times.</span></div>
         </div>
         <aside className="care-welcome-spotlight" aria-label="Your next step">
-          <div className="care-spotlight-top"><span><Activity size={15} /> YOUR NEXT STEP</span><span className="care-spotlight-live"><i /> LIVE STATUS</span></div>
+          <div className="care-spotlight-top"><span><Activity size={15} /> YOUR NEXT STEP</span><span className="care-spotlight-live"><i /> CURRENT STATUS</span></div>
           {loading ? (
             <div className="care-spotlight-loading"><span className="care-spinner" /> Checking your requests…</div>
+          ) : needsLogin ? (
+            <div className="care-spotlight-body">
+              <span className="care-spotlight-status">Private account access</span>
+              <h2>Sign in to pick up where you left off.</h2>
+              <p>Your request history and hospital replies are available after you sign in to your patient account.</p>
+              <Link href="/patient-login">Sign in to my care space <ArrowUpRight size={15} /></Link>
+            </div>
           ) : spotlightRequest ? (
             <div className="care-spotlight-body">
               <span className="care-spotlight-status">{statusLabel[spotlightRequest.status] ?? spotlightRequest.status.replaceAll("_", " ")}</span>
