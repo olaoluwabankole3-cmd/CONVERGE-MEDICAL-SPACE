@@ -79,3 +79,11 @@
 .care-converge-logo{width:184px;max-height:62px}
 .onboarding-topbar .auth-converge-logo{width:176px;max-height:58px}
 @media(max-width:680px){.auth-converge-logo{width:164px;max-height:54px}.auth-mobile-converge-logo{width:138px;max-height:46px}.care-converge-logo{width:154px;max-height:52px}.onboarding-topbar .auth-converge-logo{width:148px;max-height:50px}}
+
+/* Shared Converge identity entry point. Hidden until the OIDC provider is configured. */
+.converge-sso-divider{display:flex;align-items:center;gap:12px;margin:19px 0 13px;color:#87999b;font-size:9px;font-weight:750;letter-spacing:1.2px}
+.converge-sso-divider:before,.converge-sso-divider:after{content:"";height:1px;flex:1;background:#dfe9e6}
+.converge-sso-button{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:48px;padding:0 16px;border:1px solid #b7d4cf;border-radius:10px;background:#f3faf7;color:#1c5d56;font-size:12px;font-weight:750;transition:background .18s,border-color .18s,transform .18s}
+.converge-sso-button:hover:not(:disabled){background:#e9f7f1;border-color:#7fbab0;transform:translateY(-1px)}
+.converge-sso-button:disabled{opacity:.6;cursor:wait}
+.converge-sso-note{margin:10px 0 0;text-align:center;color:#849597;font-size:10px;line-height:1.6}
