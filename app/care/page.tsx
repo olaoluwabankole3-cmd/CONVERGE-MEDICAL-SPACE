@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Building2, CalendarDays, CheckCircle2, HeartHandshake, RefreshCw, Search, ShieldCheck, Stethoscope } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, CheckCircle2, HeartHandshake, MessageCircle, RefreshCw, Search, ShieldCheck, Stethoscope } from "lucide-react";
 
 type Service = {
   id: string;
