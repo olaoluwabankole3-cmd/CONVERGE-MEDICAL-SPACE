@@ -2460,3 +2460,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(16
   .care-service-card, .care-service-footer > a, .care-progress-track > span { transition: none; }
   .care-service-card:hover, .care-service-footer > a:hover { transform: none; }
 }
+
+
+/* Cross-workspace navigation: Medical Intelligence ↔ Converge platform */
+.care-platform-link { color: #a4edc1 !important; }
+.care-platform-link:hover { color: #d0f6da !important; }
+.platform-return-link { margin-top: 7px; border: 1px solid rgba(164,237,193,.14); border-radius: 8px; color: #a4edc1 !important; }
+.platform-return-link:hover { background: rgba(164,237,193,.07); }
+@media (max-width: 680px) {
+  .care-header-actions .care-platform-link { display: none; }
+}
