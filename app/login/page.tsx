@@ -118,6 +118,7 @@ export default function LoginPage() {
           )}
           {CONVERGE_SSO_ENABLED && (
             <>
+              {error && <div className="auth-alert error" role="alert">{error}</div>}
               <button type="button" className="converge-sso-button" onClick={() => void continueWithConverge()} disabled={busy}>
                 Continue with Converge <ArrowRight size={16} />
               </button>
