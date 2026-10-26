@@ -105,7 +105,7 @@ export default function LoginPage() {
           <div className="auth-mobile-brand"><img src="/converge-logo.svg" alt="Converge" className="converge-logo auth-mobile-converge-logo" /></div>
           <span className="auth-overline">{mode === "signin" ? "WELCOME BACK" : mode === "signup" ? "GET STARTED" : "ACCOUNT RECOVERY"}</span>
           <h2>{mode === "signin" ? "Sign in to your workspace" : mode === "signup" ? "Create your account" : "Reset your password"}</h2>
-          <p className="auth-intro">{mode === "signin" ? "Use your account credentials to continue." : mode === "signup" ? "Create an account to register your hospital workspace." : "Enter your account email and we’ll send a secure password-reset link."}</p>
+          <p className="auth-intro">{mode === "signin" ? "Use your Converge account to continue. Choose email/password or Google on the next screen." : mode === "signup" ? "Create an account to register your hospital workspace." : "Enter your account email and we’ll send a secure password-reset link."}</p>
           {!CONVERGE_SSO_ENABLED && (
           <form className="auth-form" onSubmit={submit}>
             {mode === "signup" && <label>Full name<input autoComplete="name" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your full name" /></label>}
