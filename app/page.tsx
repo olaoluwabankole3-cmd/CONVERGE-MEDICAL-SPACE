@@ -52,6 +52,7 @@ export default function MedicalLandingPage() {
           </nav>
 
           <div className="med-header-actions">
+            <a href="https://ai-native-research-qfeh.vercel.app/" className="med-platform-link">Converge platform ↗</a>
             <Link href="/login" className="med-signin">Sign in</Link>
             <Link href="/login" className="med-header-cta">Hospital access <ArrowUpRight size={15} /></Link>
           </div>
