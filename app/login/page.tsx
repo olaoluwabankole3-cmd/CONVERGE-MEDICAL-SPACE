@@ -96,7 +96,8 @@ export default function LoginPage() {
           <p className="auth-switch">{mode === "signin" ? "New to Converge?" : mode === "signup" ? "Already have an account?" : "Remember your password?"} <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); setPassword(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
           <p className="auth-legal"><ShieldCheck size={14} /> Do not submit patient information through this sign-in page.</p>
           <Link href="/patient-login" className="auth-back">Looking for care? Open the patient portal →</Link>
-          <Link href="/" className="auth-back">← Back to platform home</Link>
+          <Link href="/" className="auth-back">← Back to Medical Intelligence home</Link>
+          <a href="https://ai-native-research-qfeh.vercel.app/" className="auth-back">← Main Converge platform</a>
         </div>
       </section>
     </main>
