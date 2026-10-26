@@ -92,6 +92,7 @@ export default function PatientLoginPage() {
           <p className="patient-auth-switch">{mode === "signin" ? "New to Converge?" : "Already have a patient account?"} <button onClick={() => { setMode(value => value === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
           <p className="patient-auth-legal"><ShieldCheck size={14} /> Patient accounts are separate from hospital staff workspaces.</p>
           <Link href="/login" className="patient-auth-staff-link">Hospital team sign in</Link>
+          <a href="https://ai-native-research-qfeh.vercel.app/" className="patient-auth-staff-link">Main Converge platform ↗</a>
         </div>
       </section>
     </main>
