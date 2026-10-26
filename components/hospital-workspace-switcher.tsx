@@ -74,7 +74,8 @@ export default function HospitalWorkspaceSwitcher() {
   const selected = workspaces.find(item => item.id === selectedId);
 
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 24px 2px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 24px 2px" }}>
+      <a href="https://ai-native-research-qfeh.vercel.app/" style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "#a4edc1", fontSize: 11, fontWeight: 650, textDecoration: "none", padding: "8px 10px", border: "1px solid rgba(164,237,193,.14)", borderRadius: 8 }}>← Main Converge platform</a>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--muted, #82918a)", fontSize: 10, fontWeight: 700, letterSpacing: "0.11em", textTransform: "uppercase" }}>
         <Building2 size={14} /> Hospital workspace
       </span>
