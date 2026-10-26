@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, MessageCircle, RefreshCw, Send, ShieldCheck, XCircle } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, ArrowUpRight, CalendarClock, CheckCircle2, Clock3, HeartHandshake, MessageCircle, RefreshCw, Send, ShieldCheck, XCircle } from "lucide-react";
 
 type Service = {
   id: string; name: string; description: string | null; department: string | null;
@@ -29,6 +29,31 @@ const statusLabel: Record<string, string> = {
   completed: "Completed", no_show: "No-show", cancelled: "Cancelled", declined: "Declined",
 };
 const terminal = new Set(["completed", "no_show", "cancelled", "declined"]);
+
+function requestProgress(status: string): number {
+  if (["completed", "no_show", "cancelled", "declined"].includes(status)) return 4;
+  if (["confirmed", "in_progress", "cancellation_requested"].includes(status)) return 3;
+  if (["under_review", "awaiting_hospital", "awaiting_patient", "appointment_proposed"].includes(status)) return 2;
+  return 1;
+}
+
+function statusGuidance(status: string): string {
+  const guidance: Record<string, string> = {
+    submitted: "Your request has been sent. The hospital team will review it and record the next step here.",
+    under_review: "The hospital team is reviewing your request. Check back here for an update.",
+    awaiting_hospital: "The next step is with the hospital team. Your request remains in this workspace.",
+    awaiting_patient: "The hospital needs a response from you. Read the latest update and reply below.",
+    appointment_proposed: "A time has been proposed. Review the details and respond; it is not booked until the hospital confirms it.",
+    confirmed: "Your appointment or request has been confirmed. Check the details below before you go.",
+    in_progress: "The hospital has marked this request in progress. Use the message thread if you need to share an update.",
+    cancellation_requested: "Your cancellation request has been sent and is waiting for hospital review.",
+    completed: "This request is marked complete. Its updates remain here for your reference.",
+    no_show: "The request was marked as a missed appointment. Contact the hospital through a new request if you need to follow up.",
+    cancelled: "This request has been cancelled. You can start a new request whenever you need to.",
+    declined: "The hospital has declined this request. Review the updates for context or contact the hospital through a new request.",
+  };
+  return guidance[status] ?? "Your request status and updates are shown here. Contact the hospital through this thread if you need to respond.";
+}
 
 function formatDate(value: string | null | undefined, withTime = true) {
   if (!value) return "Not set";
@@ -109,6 +134,19 @@ export default function PatientRequestsPage() {
 
   const selectedService = useMemo(() => services.find(service => service.id === serviceId) ?? null, [services, serviceId]);
   const matchingServices = services;
+  const firstName = displayName.trim().split(/\s+/)[0] ?? "";
+  const patientStats = useMemo(() => ({
+    waitingOnHospital: requests.filter(item => ["submitted", "under_review", "awaiting_hospital", "cancellation_requested"].includes(item.status)).length,
+    needsYourReply: requests.filter(item => ["awaiting_patient", "appointment_proposed"].includes(item.status)).length,
+    upcoming: requests.filter(item => ["confirmed", "in_progress"].includes(item.status) || item.appointment?.status === "confirmed").length,
+    completed: requests.filter(item => item.status === "completed").length,
+  }), [requests]);
+  const spotlightRequest = useMemo(
+    () => requests.find(item => ["awaiting_patient", "appointment_proposed"].includes(item.status))
+      ?? requests.find(item => !terminal.has(item.status))
+      ?? null,
+    [requests],
+  );
 
   function chooseService(value: string) {
     setServiceId(value);
@@ -200,21 +238,65 @@ export default function PatientRequestsPage() {
         <nav className="care-header-actions"><Link href="/care" className="care-nav-link">Service directory</Link><span className="care-account">{email || "Patient workspace"}</span><Link href="/patient-login" className="care-nav-primary">Account <ArrowRight size={15} /></Link></nav>
       </header>
 
-      <section className="care-workspace-heading">
-        <Link href="/care" className="care-back-link"><ArrowLeft size={14} /> Service directory</Link>
-        <span className="care-eyebrow">PATIENT WORKSPACE</span>
-        <h1>Your requests and next steps</h1>
-        <p>Submit a request to a participating hospital and follow its response. Appointment times are only confirmed by the hospital.</p>
+      <section className="care-workspace-heading care-patient-welcome">
+        <div className="care-patient-welcome-copy">
+          <Link href="/care" className="care-back-link"><ArrowLeft size={14} /> Service directory</Link>
+          <span className="care-eyebrow"><HeartHandshake size={15} /> YOUR PRIVATE CARE SPACE</span>
+          <h1>{firstName ? `Welcome back, ${firstName}.` : "Your care, in one place."}</h1>
+          <p>Keep your requests, hospital replies and appointment updates together. You should not have to guess what happens next.</p>
+          <div className="care-welcome-actions">
+            <a className="care-button-primary" href="#new-request">Start a request <ArrowUpRight size={16} /></a>
+            <a className="care-button-secondary" href="#your-requests">Follow my progress <ArrowRight size={15} /></a>
+          </div>
+          <div className="care-welcome-trust"><ShieldCheck size={15} /><span>Your requests are private to your account. Hospital staff review and confirm appointment times.</span></div>
+        </div>
+        <aside className="care-welcome-spotlight" aria-label="Your next step">
+          <div className="care-spotlight-top"><span><Activity size={15} /> YOUR NEXT STEP</span><span className="care-spotlight-live"><i /> LIVE STATUS</span></div>
+          {loading ? (
+            <div className="care-spotlight-loading"><span className="care-spinner" /> Checking your requests…</div>
+          ) : spotlightRequest ? (
+            <div className="care-spotlight-body">
+              <span className="care-spotlight-status">{statusLabel[spotlightRequest.status] ?? spotlightRequest.status.replaceAll("_", " ")}</span>
+              <h2>{spotlightRequest.subject}</h2>
+              <p>{statusGuidance(spotlightRequest.status)}</p>
+              <a href={`#request-${spotlightRequest.id}`}>Open this request <ArrowUpRight size={15} /></a>
+            </div>
+          ) : (
+            <div className="care-spotlight-body">
+              <span className="care-spotlight-status">A fresh start</span>
+              <h2>{requests.length ? "All caught up for now." : "What can we help you with?"}</h2>
+              <p>{requests.length ? "There is no active request waiting on a next step. Your previous updates stay available below." : "Choose a participating hospital service and start a request. The team’s response will appear here."}</p>
+              <a href="#new-request">{requests.length ? "Make another request" : "Start your first request"} <ArrowUpRight size={15} /></a>
+            </div>
+          )}
+          <div className="care-spotlight-foot"><span><Clock3 size={14} /> Status updates stay connected to each request</span></div>
+        </aside>
       </section>
 
       {error && <div className="care-alert error" role="alert">{error}</div>}
       {notice && <div className="care-alert success" role="status"><CheckCircle2 size={16} />{notice}</div>}
 
+      {!loading && !needsLogin && (
+        <section className="care-patient-stats" aria-label="Your request summary">
+          <article className="care-patient-stat"><span className="care-stat-icon"><Clock3 size={17} /></span><div><span>With the hospital</span><strong>{patientStats.waitingOnHospital}</strong><small>{patientStats.waitingOnHospital === 1 ? "request awaiting review" : "requests awaiting review"}</small></div></article>
+          <article className="care-patient-stat"><span className="care-stat-icon care-stat-icon-warm"><MessageCircle size={17} /></span><div><span>Needs your reply</span><strong>{patientStats.needsYourReply}</strong><small>{patientStats.needsYourReply === 1 ? "response needed" : "responses needed"}</small></div></article>
+          <article className="care-patient-stat"><span className="care-stat-icon"><CalendarClock size={17} /></span><div><span>Confirmed / in progress</span><strong>{patientStats.upcoming}</strong><small>active care steps</small></div></article>
+          <article className="care-patient-stat"><span className="care-stat-icon care-stat-icon-muted"><CheckCircle2 size={17} /></span><div><span>Completed</span><strong>{patientStats.completed}</strong><small>requests closed out</small></div></article>
+        </section>
+      )}
+
       {needsLogin ? (
         <section className="care-login-prompt"><div className="care-empty-mark"><ShieldCheck size={23} /></div><h2>Sign in to see your requests</h2><p>Your requests are private to your account. Sign in or create a patient account to continue.</p><Link className="care-button-primary" href="/patient-login">Patient sign in <ArrowRight size={16} /></Link></section>
       ) : (
+        <>
+        <section className="care-next-steps" aria-label="How the request process works">
+          <div className="care-next-steps-heading"><span className="care-eyebrow">SIMPLE, CONNECTED STEPS</span><strong>From request to response</strong></div>
+          <div className="care-next-step-item"><span>01</span><div><strong>You tell us what you need</strong><small>Choose a service and send the request.</small></div></div>
+          <div className="care-next-step-item"><span>02</span><div><strong>The hospital reviews it</strong><small>Staff review and respond through the workspace.</small></div></div>
+          <div className="care-next-step-item"><span>03</span><div><strong>You see the next step</strong><small>Replies and appointment updates stay together.</small></div></div>
+        </section>
         <div className="care-workspace-grid">
-          <section className="care-request-form-panel">
+          <section className="care-request-form-panel" id="new-request">
             <div className="care-panel-heading"><div><span className="care-eyebrow">NEW REQUEST</span><h2>What do you need help with?</h2></div><span className="care-panel-index">01</span></div>
             <p className="care-panel-intro">Share the minimum details needed to route your request. Avoid including urgent or highly sensitive clinical information.</p>
             {loading ? <div className="care-loading"><span className="care-spinner" /> Loading your workspace…</div> : (
@@ -245,18 +327,30 @@ export default function PatientRequestsPage() {
             {!loading && services.length === 0 && <div className="care-form-empty">No services have been published yet. Check the directory again later.</div>}
           </section>
 
-          <section className="care-my-requests">
+          <section className="care-my-requests" id="your-requests">
             <div className="care-panel-heading"><div><span className="care-eyebrow">YOUR ACTIVITY</span><h2>Request history</h2></div><button className="care-icon-button" onClick={() => void load()} disabled={loading} aria-label="Refresh requests"><RefreshCw size={16} /></button></div>
             <div className="care-request-summary"><span><strong>{requests.length}</strong> requests</span><span><strong>{requests.filter(item => !terminal.has(item.status)).length}</strong> still active</span></div>
             {loading && <div className="care-loading"><span className="care-spinner" /> Loading requests…</div>}
             {!loading && requests.length === 0 && <div className="care-empty compact-empty"><div className="care-empty-mark"><CalendarClock size={20} /></div><h3>No requests yet</h3><p>Once you submit a request, its status and hospital updates will appear here.</p></div>}
             <div className="care-request-list">
               {requests.map(item => (
-                <article className="care-request-card" key={item.id}>
+                <article className="care-request-card" key={item.id} id={`request-${item.id}`}>
+                  <div className="care-request-card-glow" aria-hidden="true" />
                   <div className="care-request-card-top"><span className="care-request-code">{item.request_code}</span><span className={`care-status care-status-${item.status}`}>{statusLabel[item.status] ?? item.status.replaceAll("_", " ")}</span></div>
                   <h3>{item.subject}</h3>
                   <div className="care-request-meta"><span>{item.hospital?.name ?? "Participating hospital"}</span><span>·</span><span>{item.service?.name ?? "Service"}</span></div>
                   <div className="care-request-date">Submitted {formatDate(item.submitted_at || item.created_at, false)}</div>
+                  <div className="care-request-progress" aria-label={`Request progress: step ${requestProgress(item.status)} of 4`}>
+                    <div className="care-progress-caption"><span>Progress</span><span>Step {requestProgress(item.status)} of 4</span></div>
+                    <div className="care-progress-track"><span style={{ width: `${requestProgress(item.status) * 25}%` }} /></div>
+                    <div className="care-progress-steps">
+                      <span className={requestProgress(item.status) >= 1 ? "is-reached" : ""}>Received</span>
+                      <span className={requestProgress(item.status) >= 2 ? "is-reached" : ""}>Review</span>
+                      <span className={requestProgress(item.status) >= 3 ? "is-reached" : ""}>Next step</span>
+                      <span className={requestProgress(item.status) >= 4 ? "is-reached" : ""}>Closed</span>
+                    </div>
+                  </div>
+                  <p className="care-request-guidance">{statusGuidance(item.status)}</p>
 
                   {item.appointment && <div className="care-appointment-box"><div className="care-appointment-title"><CalendarClock size={16} /><strong>{item.appointment.status === "confirmed" ? "Confirmed appointment" : "Appointment details"}</strong></div><p>{formatDate(item.appointment.start_at)} — {formatDate(item.appointment.end_at)}</p>{item.appointment.location && <span>{item.appointment.location}</span>}{item.appointment.patient_instructions && <p className="care-appointment-instructions">{item.appointment.patient_instructions}</p>}{item.appointment.status === "proposed" && <button className="care-button-primary small" onClick={() => void respond(item.id, "accept_appointment")} disabled={workingId === item.id}>{workingId === item.id ? "Sending…" : "Accept proposed time"} <CheckCircle2 size={14} /></button>}{item.appointment.status === "patient_accepted" && <p className="care-awaiting-note">You accepted this time. The hospital must confirm it before it is booked.</p>}</div>}
 
@@ -274,6 +368,7 @@ export default function PatientRequestsPage() {
             </div>
           </section>
         </div>
+        </>
       )}
 
       <footer className="care-footer"><Link href="/care" className="care-brand compact" aria-label="Converge home"><img src="/converge-logo.svg" alt="Converge" className="converge-logo care-converge-logo care-footer-logo" /></Link><span>Only participating hospitals can respond to requests submitted here.</span><Link href="/login">Hospital team sign in</Link></footer>
