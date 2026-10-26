@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Activity, ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const CONVERGE_SSO_ENABLED = process.env.NEXT_PUBLIC_CONVERGE_SSO_ENABLED === "true";
+const CONVERGE_SSO_ENABLED = true;
 
 function patientDestination() {
   const params = new URLSearchParams(window.location.search);
@@ -103,6 +103,7 @@ export default function PatientLoginPage() {
           <span className="care-eyebrow">{mode === "signin" ? "WELCOME BACK" : "CREATE PATIENT ACCOUNT"}</span>
           <h2>{mode === "signin" ? "Sign in to your care space" : "Create your account"}</h2>
           <p className="patient-auth-intro">{mode === "signin" ? "Continue to your patient requests and hospital updates." : "Use an email address you can access to receive account confirmation."}</p>
+          {!CONVERGE_SSO_ENABLED && (
           <form className="patient-auth-form" onSubmit={submit}>
             {mode === "signup" && <label>Full name<input autoComplete="name" value={name} onChange={event => setName(event.target.value)} required minLength={2} maxLength={160} placeholder="Your full name" /></label>}
             <label>Email address<input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@example.com" /></label>
@@ -111,16 +112,16 @@ export default function PatientLoginPage() {
             {message && <div className="care-alert success" role="status">{message}</div>}
             <button type="submit" className="care-button-primary wide" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create patient account"} {!busy && <ArrowRight size={16} />}</button>
           </form>
-          {mode === "signin" && CONVERGE_SSO_ENABLED && (
+          )}
+          {CONVERGE_SSO_ENABLED && (
             <>
-              <div className="converge-sso-divider"><span>OR CONTINUE WITH</span></div>
               <button type="button" className="converge-sso-button" onClick={() => void continueWithConverge()} disabled={busy}>
                 Continue with Converge <ArrowRight size={16} />
               </button>
-              <p className="converge-sso-note">Patient access remains separate from hospital staff permissions.</p>
+              <p className="converge-sso-note">Use the same Converge account as the rest of the platform. Choose email/password or Google on the Converge sign-in screen. Patient data remains protected by Medical Intelligence.</p>
             </>
           )}
-          <p className="patient-auth-switch">{mode === "signin" ? "New to Converge?" : "Already have a patient account?"} <button onClick={() => { setMode(value => value === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
+          {!CONVERGE_SSO_ENABLED && <p className="patient-auth-switch">{mode === "signin" ? "New to Converge?" : "Already have a patient account?"} <button onClick={() => { setMode(value => value === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>}
           <p className="patient-auth-legal"><ShieldCheck size={14} /> Patient accounts are separate from hospital staff workspaces.</p>
           <Link href="/login" className="patient-auth-staff-link">Hospital team sign in</Link>
           <a href="https://ai-native-research-qfeh.vercel.app/" className="patient-auth-staff-link">Main Converge platform ↗</a>
