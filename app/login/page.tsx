@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const CONVERGE_SSO_ENABLED = process.env.NEXT_PUBLIC_CONVERGE_SSO_ENABLED === "true";
+const CONVERGE_SSO_ENABLED = true;
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
@@ -106,6 +106,7 @@ export default function LoginPage() {
           <span className="auth-overline">{mode === "signin" ? "WELCOME BACK" : mode === "signup" ? "GET STARTED" : "ACCOUNT RECOVERY"}</span>
           <h2>{mode === "signin" ? "Sign in to your workspace" : mode === "signup" ? "Create your account" : "Reset your password"}</h2>
           <p className="auth-intro">{mode === "signin" ? "Use your account credentials to continue." : mode === "signup" ? "Create an account to register your hospital workspace." : "Enter your account email and we’ll send a secure password-reset link."}</p>
+          {!CONVERGE_SSO_ENABLED && (
           <form className="auth-form" onSubmit={submit}>
             {mode === "signup" && <label>Full name<input autoComplete="name" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your full name" /></label>}
             <label>Email address<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@hospital.org" /></label>
@@ -114,17 +115,17 @@ export default function LoginPage() {
             {message && <div className="auth-alert success" role="status">{message}</div>}
             <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"} {!busy && <ArrowRight size={17} />}</button>
           </form>
-          {mode === "signin" && CONVERGE_SSO_ENABLED && (
+          )}
+          {CONVERGE_SSO_ENABLED && (
             <>
-              <div className="converge-sso-divider"><span>OR CONTINUE WITH</span></div>
               <button type="button" className="converge-sso-button" onClick={() => void continueWithConverge()} disabled={busy}>
                 Continue with Converge <ArrowRight size={16} />
               </button>
-              <p className="converge-sso-note">One identity across workspaces. Hospital approval and permissions still apply.</p>
+              <p className="converge-sso-note">Use your one Converge account. Choose email/password or Google on the Converge sign-in screen. Hospital approval and permissions still apply.</p>
             </>
           )}
-          {mode === "signin" && <p className="auth-switch"><button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }}>Forgot password?</button></p>}
-          <p className="auth-switch">{mode === "signin" ? "New to Converge?" : mode === "signup" ? "Already have an account?" : "Remember your password?"} <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); setPassword(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>
+          {!CONVERGE_SSO_ENABLED && mode === "signin" && <p className="auth-switch"><button type="button" onClick={() => { setMode("forgot"); setError(""); setMessage(""); }}>Forgot password?</button></p>}
+          {!CONVERGE_SSO_ENABLED && <p className="auth-switch">{mode === "signin" ? "New to Converge?" : mode === "signup" ? "Already have an account?" : "Remember your password?"} <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); setPassword(""); }}>{mode === "signin" ? "Create an account" : "Sign in"}</button></p>}
           <p className="auth-legal"><ShieldCheck size={14} /> Do not submit patient information through this sign-in page.</p>
           <Link href="/patient-login" className="auth-back">Looking for care? Open the patient portal →</Link>
           <Link href="/" className="auth-back">← Back to Medical Intelligence home</Link>
